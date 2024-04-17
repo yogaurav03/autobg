@@ -1,0 +1,16 @@
+export const APIURLS = {
+  login: "login",
+  managepassword: (userid) => `managepassword?userid=${userid}`,
+  forgotpassword: "forgotpassword",
+  getUser: "getuser",
+  getHistory: "history",
+  getImages: (collectionid) => `getimages?collectionId=${collectionid}`,
+  getTaskTray: "tasktray",
+  reportImage: (imageId, reportReason, reportComment) =>
+    `reportimage?imageId=${imageId}&reportReason=${reportReason}&reportComment=${reportComment}`,
+  usageHistory: "usagehistory",
+  deleteaccount: (username) => `deleteaccount?username=${username}`,
+  selecttemplate: "selecttemplate",
+  createBatch: "createbatch",
+  uploadImage: "uploadins3",
+};
