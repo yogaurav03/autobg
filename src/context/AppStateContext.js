@@ -18,6 +18,7 @@ const initialState = {
   token: "",
   profileData: {},
   taskTrayData: [],
+  carAnglesData: [],
 };
 
 const appStateReducer = (state, action) => {
@@ -30,6 +31,8 @@ const appStateReducer = (state, action) => {
       return { ...state, profileData: action.payload };
     case "TASK_TRAY_DATA":
       return { ...state, taskTrayData: action.payload };
+    case "CAR_ANGLES_DATA":
+      return { ...state, carAnglesData: action.payload };
     case "TOKEN":
       return { ...state, token: action.payload };
     default:
@@ -39,6 +42,27 @@ const appStateReducer = (state, action) => {
 
 export const AppStateProvider = ({ children }) => {
   const [state, dispatch] = useReducer(appStateReducer, initialState);
+
+  const updateRemainingTime = () => {
+    const currentTime = Date.now();
+    const updatedTaskTrayData = state.taskTrayData.map((item) => ({
+      ...item,
+      remainingTime: Math.max(
+        0,
+        item.duration - (currentTime - item.startTime) / 1000
+      ),
+    }));
+    dispatch({ type: "UPDATE_TASK_TRAY_DATA", payload: updatedTaskTrayData });
+  };
+
+  // Start an interval when the AppStateProvider mounts
+  useEffect(() => {
+    const timerId = setInterval(() => {
+      updateRemainingTime();
+    }, 1000); // Update every second
+
+    return () => clearInterval(timerId);
+  }, [state.taskTrayData]);
 
   // Load the token from AsyncStorage when the app starts
   useEffect(() => {

@@ -104,8 +104,10 @@ const History = ({ navigation }) => {
             <View style={styles.totalPhotosContainer}>
               <Image source={image3} style={styles.overlayImage} />
               <Text style={styles.totalPhotosText}>
-                {item?.processedImgCount} {"\n"}{" "}
-                <Text style={styles.photosText}>Photos</Text>
+                {item?.processedImgCount === 0
+                  ? item?.failedImgCount
+                  : item?.processedImgCount}{" "}
+                {"\n"} <Text style={styles.photosText}>Photos</Text>
               </Text>
             </View>
           </View>
@@ -195,6 +197,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF", // Background color of the screen
+    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   iconStyle: {
     flexDirection: "row",
@@ -375,10 +378,11 @@ const styles = StyleSheet.create({
   },
   historyContainer: {
     backgroundColor: "#C7EAFF",
-    height: "80%",
+    height: "100%",
     marginTop: 20,
     borderRadius: 10,
     padding: 10,
+    paddingBottom: 50,
   },
   historyHeader: {
     flexDirection: "row",
@@ -449,7 +453,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: "50%",
     left: "50%",
-    transform: [{ translateX: -25 }, { translateY: -25 }],
+    transform: [{ translateX: -25 }, { translateY: -30 }],
     color: "white",
     fontSize: moderateScale(24),
     textAlign: "center",
@@ -484,12 +488,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#2499DA",
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 5,
+    borderRadius: 10,
   },
   buttonText: {
     color: "#ffffff",
-    fontSize: moderateScale(16),
+    fontSize: moderateScale(14),
     textAlign: "center",
+    fontWeight: "600",
   },
   noDataContainer: {
     justifyContent: "center",

@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   FlatList,
   Image,
+  Alert,
 } from "react-native";
 import { LeftArrow, SelectedTick } from "../../assets/icons";
 import { image4 } from "../../assets/images";
@@ -101,7 +102,8 @@ const SelectBackground = ({ navigation }) => {
 
         <View style={styles.subContainer}>
           <TouchableOpacity
-            onPress={() => navigation.navigate("SelectImageAnglesScreen")}
+            // onPress={() => navigation.navigate("SelectImageAnglesScreen")}
+            onPress={() => Alert.alert("In Progress....")}
             style={styles.nextButton}
           >
             <Text style={styles.nextButtonText}>NEXT</Text>
@@ -117,6 +119,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF",
+    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   backButton: {
     flexDirection: "row",

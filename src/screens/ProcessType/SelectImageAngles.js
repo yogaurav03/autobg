@@ -28,6 +28,7 @@ import { moderateScale } from "../../utils/Scaling";
 
 const SelectImageAngles = ({ navigation, route }) => {
   const batchId = route?.params?.batchId;
+  const selectedTemplateId = route?.params?.selectedTemplateId;
   const [isExteriorSelected, setIsExteriorSelected] = useState(true);
   const [selectedAngles, setSelectedAngles] = useState([]);
   const [selectedInteriorAngles, setSelectedInteriorAngles] = useState([]);
@@ -198,6 +199,8 @@ const SelectImageAngles = ({ navigation, route }) => {
                 selectedAngles: selectedAngles,
                 selectedInteriorAngles: selectedInteriorAngles,
                 batchId: batchId,
+                selectedTemplateId: selectedTemplateId,
+                screenId: route?.params?.screenId,
               })
             }
             style={styles.nextButton}
@@ -215,6 +218,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF",
+    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   backButton: {
     flexDirection: "row",

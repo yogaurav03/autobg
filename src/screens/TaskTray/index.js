@@ -35,12 +35,28 @@ const TaskTray = () => {
     try {
       if (state.token) {
         const response = await api.get(APIURLS.getTaskTray, state.token);
-        dispatch({ type: "TASK_TRAY_DATA", payload: response.data });
-        setTaskTrayData(response.data);
+
+        const withTimers = response.data.map((item) => ({
+          ...item,
+          startTime: Date.now(), // Set the current time as start time
+          duration: 15 * 60, // Set duration for 15 minutes in seconds
+          remainingTime: 15 * 60, // Initially set remaining time to full duration
+        }));
+
+        dispatch({ type: "TASK_TRAY_DATA", payload: withTimers });
+        setTaskTrayData(withTimers);
       }
     } catch (error) {
       console.error("Failed to fetch user data:", error);
     }
+  };
+
+  const getRemainingTime = (startTime) => {
+    const currentTime = Date.now();
+    const elapsedTime = (currentTime - startTime) / 1000; // in seconds
+    const totalDuration = 15 * 60; // 15 minutes in seconds
+    const remainingTime = totalDuration - elapsedTime;
+    return Math.max(remainingTime, 0); // return 0 if the time is negative
   };
 
   useEffect(() => {
@@ -79,6 +95,8 @@ const TaskTray = () => {
     );
     const date = collectionCreatedAt.toISOString().split("T")[0];
     const time = collectionCreatedAt.toTimeString().split(" ")[0];
+
+    const remainingTime = getRemainingTime(item?.startTime);
     return (
       <TouchableOpacity
         onPress={() =>
@@ -88,7 +106,7 @@ const TaskTray = () => {
           })
         }
         style={styles.blueContainer}
-        disabled={item?.collectionData?.isEmpWorkDone === 1}
+        disabled={item?.collectionData?.isEmpWorkDone === 0}
       >
         {/* Individual list container */}
         <View style={styles.listContainer}>
@@ -99,8 +117,10 @@ const TaskTray = () => {
             <View style={styles.totalPhotosContainer}>
               <Image source={image3} style={styles.overlayImage} />
               <Text style={styles.totalPhotosText}>
-                {item?.processedImgCount} {"\n"}{" "}
-                <Text style={styles.photosText}>Photos</Text>
+                {item?.processedImgCount === 0
+                  ? item?.failedImgCount
+                  : item?.processedImgCount}{" "}
+                {"\n"} <Text style={styles.photosText}>Photos</Text>
               </Text>
             </View>
           </View>
@@ -116,13 +136,14 @@ const TaskTray = () => {
           </View>
 
           {/* Right side of list container */}
-          {item?.collectionData?.isEmpWorkDone === 1 ? (
+          {item?.collectionData?.isEmpWorkDone === 0 ? (
             <CountdownCircleTimer
               size={70}
               strokeWidth={6}
               isPlaying
-              duration={900}
+              duration={item.duration}
               colors={["#32A1FC", "#F7B801", "#A30000", "#A30000"]}
+              initialRemainingTime={remainingTime}
               colorsTime={[7, 5, 2, 0]}
             >
               {({ remainingTime }) => (
@@ -156,7 +177,7 @@ const TaskTray = () => {
 
         <View style={styles.historyContainer}>
           <FlatList
-            data={taskTrayData}
+            data={state?.taskTrayData}
             renderItem={renderItem}
             keyExtractor={(item) => item?.collectionData?.collectionId}
             refreshControl={
@@ -175,6 +196,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF", // Background color of the screen
+    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   header: {
     flexDirection: "row",
@@ -210,7 +232,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   taskTrayText: {
-    fontSize: moderateScale(10),
+    fontSize: moderateScale(16),
     fontWeight: "bold",
     color: "#CBCBCB", // Text color
     marginLeft: 10,
@@ -339,10 +361,11 @@ const styles = StyleSheet.create({
   },
   historyContainer: {
     backgroundColor: "#C7EAFF",
-    height: "80%",
+    height: "100%",
     marginTop: 20,
     borderRadius: 10,
     padding: 10,
+    paddingBottom: 50,
   },
   historyHeader: {
     flexDirection: "row",

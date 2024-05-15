@@ -57,7 +57,7 @@ const SelectProcessType = ({ navigation }) => {
               <Text style={styles.selectTxt}>Select</Text>
               <Text style={styles.processTypeTxt}>Process Type</Text>
             </View>
-            <HelpIcon />
+            {/* <HelpIcon /> */}
           </View>
         </View>
         <SubContainer title="Generate using" subTitle="Saved Template" id={1} />
@@ -77,6 +77,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF", // Background color of the screen
+    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   backText: {
     color: "#004E8E",

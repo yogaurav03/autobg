@@ -72,6 +72,8 @@ const SelectTemplate = ({ navigation, route }) => {
     if (response.code === 1) {
       navigation.navigate("SelectImageAnglesScreen", {
         batchId: response?.batchid,
+        selectedTemplateId: selectedTemplateId,
+        screenId: route?.params?.screenId,
       });
     } else {
       Alert.alert(response.message || "Please try again.");
@@ -115,8 +117,12 @@ const SelectTemplate = ({ navigation, route }) => {
 
         <View style={styles.subContainer}>
           <TouchableOpacity
+            disabled={selectedTemplateId === null ? true : false}
             onPress={() => createBatch()}
-            style={styles.nextButton}
+            style={[
+              styles.nextButton,
+              selectedTemplateId === null ? styles.disabledBtn : {},
+            ]}
           >
             <Text style={styles.nextButtonText}>NEXT</Text>
           </TouchableOpacity>
@@ -131,6 +137,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF",
+    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   backButton: {
     flexDirection: "row",
@@ -186,6 +193,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 10,
+  },
+  disabledBtn: {
+    opacity: 0.5,
   },
   nextButtonText: {
     color: "#FFF",

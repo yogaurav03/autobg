@@ -13,4 +13,6 @@ export const APIURLS = {
   selecttemplate: "selecttemplate",
   createBatch: "createbatch",
   uploadImage: "uploadins3",
+  withtemplate: "withtemplate",
+  withouttemplate: "withouttemplate",
 };

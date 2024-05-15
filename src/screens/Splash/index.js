@@ -5,18 +5,20 @@ import {
   StyleSheet,
   TouchableOpacity,
   Text,
+  Image,
 } from "react-native";
 import React from "react";
 import LottieView from "lottie-react-native";
 import { icon } from "../../assets/lottie";
 import { moderateScale } from "../../utils/Scaling";
+import { carImg } from "../../assets/images";
 
 const Splash = ({ navigation }) => {
-  const { width } = Dimensions.get("screen");
+  const { width, height } = Dimensions.get("screen");
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.container}>
-        <View style={{ flex: 0.2 }}>
+        <View style={{ flex: 0.4 }}>
           <LottieView
             ref={(animation) => {
               animationRef = animation;
@@ -27,7 +29,13 @@ const Splash = ({ navigation }) => {
             style={{ width: width, height: 300, zIndex: 1 }}
           />
         </View>
-        <View style={{ flex: 0.6 }} />
+        <View style={{ flex: 0.5 }}>
+          <Image
+            source={carImg}
+            resizeMode="contain"
+            style={{ height: height / 2.5 }}
+          />
+        </View>
         <View style={styles.subContainer}>
           <TouchableOpacity
             onPress={() => navigation.navigate("SignInScreen")}
@@ -49,7 +57,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   subContainer: {
-    flex: 0.2,
+    flex: 0.1,
     width: "80%",
   },
   btnContainer: {

@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key></key>
+	<string></string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
@@ -32,7 +34,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>5</string>
+	<string>14</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -51,9 +53,15 @@
 		</dict>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Allow ML Camera to access your camera</string>
+	<string>Allow AutoBg to access your camera</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Allow ML Camera to access your microphone</string>
+	<string>Allow AutoBg to access your microphone</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Allow AutoBg to detect motion</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Allow AutoBg for photo library access permission</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow AutoBg needs access to your photo library to download and save images.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>SplashScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

@@ -6,30 +6,28 @@ import { moderateScale } from "../../utils/Scaling";
 
 const TaskQueued = ({ navigation }) => {
   useEffect(() => {
-    const lockOrientation = async () => {
-      // Lock the orientation to potrait
-      await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.PORTRAIT
-      );
-    };
+    const unsubscribeFocus = navigation.addListener("focus", () => {
+      // Optionally introduce a delay if needed
+      setTimeout(() => {
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+      }, 100); // Delay for 100 milliseconds, adjust as necessary
+    });
 
-    lockOrientation();
+    const unsubscribeBlur = navigation.addListener("blur", () => {
+      ScreenOrientation.unlockAsync();
+    });
 
-    // Clean up the orientation lock on component unmount
     return () => {
-      const unlockOrientation = async () => {
-        await ScreenOrientation.unlockAsync(); // This will unlock the orientation
-      };
-
-      unlockOrientation();
+      unsubscribeFocus();
+      unsubscribeBlur();
     };
-  }, []);
+  }, [navigation]);
 
   return (
     <View style={styles.container}>
       <View style={styles.firstContainer}>
         <Text style={styles.qadoneTxt}>Task Queued</Text>
-        <Timer totalTime={100} />
+        <Timer totalTime={900} />
         <Text style={styles.vehicleTxt}>Mazda Rx7</Text>
         <Text style={styles.noTxt}>225Mb</Text>
         <View style={styles.hintContainer}>

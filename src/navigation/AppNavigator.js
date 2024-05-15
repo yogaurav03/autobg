@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
+import { StatusBar } from "react-native";
 import {
   Billing,
   Camera,
+  CheckImages,
   FolderName,
   ForgotPassword,
   History,
@@ -140,6 +142,11 @@ const MainNavigator = () => (
       name="PreviewScreen"
       component={Preview}
     />
+    <MainStack.Screen
+      options={{ headerShown: false }}
+      name="CheckImagesScreen"
+      component={CheckImages}
+    />
   </MainStack.Navigator>
 );
 
@@ -152,6 +159,11 @@ const AppNavigator = () => {
   }, [state.token]);
   return (
     <NavigationContainer>
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
+      />
       {isSignedIn ? <MainNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );

@@ -12,14 +12,16 @@ import {
 } from "react-native";
 import { HistoryIcon, RightArrow, TaskTray, TwoBall } from "../../assets/icons";
 import { image1, image2, image3 } from "../../assets/images";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import Orientation from "react-native-orientation-locker";
+import { Camera } from "expo-camera";
 import { useAppState } from "../../context/AppStateContext";
 import { APIURLS } from "../../utils/ApiUrl";
 import api from "../../utils/Api";
 import { moderateScale } from "../../utils/Scaling";
 
 const Home = () => {
+  const isFocused = useIsFocused();
   const navigation = useNavigation();
   const { state, dispatch } = useAppState();
   const [refreshing, setRefreshing] = useState(false);
@@ -52,7 +54,7 @@ const Home = () => {
   useEffect(() => {
     fetchUserData();
     fetchHistoryData();
-  }, []);
+  }, [isFocused]);
 
   useEffect(() => {
     // Lock the orientation to landscape
@@ -64,18 +66,27 @@ const Home = () => {
     };
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      await Camera.requestCameraPermissionsAsync();
+    })();
+  }, []);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchHistoryData();
     setRefreshing(false);
   }, []);
 
-  const renderItem = ({ item }) => {
+  const renderItem = ({ item, index }) => {
     const collectionCreatedAt = new Date(
       item.collectionData?.collectionCreatedAt
     );
     const date = collectionCreatedAt.toISOString().split("T")[0];
     const time = collectionCreatedAt.toTimeString().split(" ")[0];
+
+    const isLastItem = index === historyData?.length - 1;
+
     return (
       <TouchableOpacity
         onPress={() =>
@@ -84,7 +95,7 @@ const Home = () => {
             screenName: "History",
           })
         }
-        style={styles.blueContainer}
+        style={[styles.blueContainer, isLastItem ? styles.lastItemStyle : null]}
       >
         {/* Individual list container */}
         <View style={styles.listContainer}>
@@ -95,8 +106,10 @@ const Home = () => {
             <View style={styles.totalPhotosContainer}>
               <Image source={image3} style={styles.overlayImage} />
               <Text style={styles.totalPhotosText}>
-                {item?.processedImgCount} {"\n"}{" "}
-                <Text style={styles.photosText}>Photos</Text>
+                {item?.processedImgCount === 0
+                  ? item?.failedImgCount
+                  : item?.processedImgCount}{" "}
+                {"\n"} <Text style={styles.photosText}>Photos</Text>
               </Text>
             </View>
           </View>
@@ -214,6 +227,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF", // Background color of the screen
+    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   header: {
     flexDirection: "row",
@@ -373,11 +387,10 @@ const styles = StyleSheet.create({
   },
   historyContainer: {
     backgroundColor: "#C7EAFF",
-    height: "65%",
+    height: "60%",
     marginTop: 20,
     borderRadius: 10,
     padding: 10,
-    paddingBottom: Platform.OS === "ios" ? 40 : 80,
   },
   historyHeader: {
     flexDirection: "row",
@@ -414,6 +427,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginVertical: 2,
   },
+  lastItemStyle: {
+    marginBottom: 100,
+  },
   listContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -441,7 +457,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: "50%",
     left: "50%",
-    transform: [{ translateX: -25 }, { translateY: -25 }],
+    transform: [{ translateX: -25 }, { translateY: -30 }],
     color: "white",
     fontSize: moderateScale(24),
     textAlign: "center",

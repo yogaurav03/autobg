@@ -7,6 +7,7 @@ import {
   StyleSheet,
   SafeAreaView,
   Platform,
+  Linking,
 } from "react-native";
 import { profileImg } from "../../assets/images";
 import { LockIcon, RightArrow } from "../../assets/icons";
@@ -104,10 +105,21 @@ const Profile = () => {
 };
 
 const renderListItem = (text) => (
-  <View style={styles.listItem}>
+  <TouchableOpacity
+    onPress={() => {
+      Linking.openURL(
+        text === "Manage Plans"
+          ? "https://autobg.ai/pricing.php"
+          : text === "Billing"
+          ? "https://autobg.ai/user_profile.php"
+          : "https://autobg.ai/how_it_works.php"
+      );
+    }}
+    style={styles.listItem}
+  >
     <Text style={styles.listText}>{text}</Text>
     <RightArrow />
-  </View>
+  </TouchableOpacity>
 );
 
 const renderHorizontalLine = () => <View style={styles.horizontalLine} />;
@@ -117,6 +129,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#EAF7FF",
     padding: Platform.OS === "android" ? 10 : 20,
+    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   shadowContainer: {
     backgroundColor: "white",

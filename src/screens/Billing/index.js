@@ -190,9 +190,11 @@ const Billing = ({ navigation, route }) => {
               <Text style={styles.balText}>Balance</Text>
             </View>
           </View>
-          <Text style={styles.balanceText}>
-            {userData?.userDetails?.currentCredits}
-          </Text>
+          <View style={{ marginTop: Platform.OS === "ios" ? -2 : -6 }}>
+            <Text style={styles.balanceText}>
+              {userData?.userDetails?.currentCredits}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.historyContainer}>
@@ -226,6 +228,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF", // Background color of the screen
+    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   header: {
     flexDirection: "row",
@@ -399,6 +402,7 @@ const styles = StyleSheet.create({
     borderColor: "#8BED0F",
     paddingHorizontal: 5,
     paddingVertical: 2,
+    marginBottom: 7,
   },
   dot: {
     width: 8,

@@ -6,24 +6,19 @@ import { moderateScale } from "../../utils/Scaling";
 
 const QADone = ({ navigation }) => {
   useEffect(() => {
-    const lockOrientation = async () => {
-      // Lock the orientation to landscape
-      await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.LANDSCAPE
-      );
-    };
+    const unsubscribeFocus = navigation.addListener("focus", () => {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+    });
 
-    lockOrientation();
+    const unsubscribeBlur = navigation.addListener("blur", () => {
+      ScreenOrientation.unlockAsync();
+    });
 
-    // Clean up the orientation lock on component unmount
     return () => {
-      const unlockOrientation = async () => {
-        await ScreenOrientation.unlockAsync(); // This will unlock the orientation
-      };
-
-      unlockOrientation();
+      unsubscribeFocus();
+      unsubscribeBlur();
     };
-  }, []);
+  }, [navigation]);
 
   return (
     <View style={styles.container}>

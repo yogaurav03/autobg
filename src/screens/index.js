@@ -16,3 +16,4 @@ export { default as Preview } from "./ProcessType/Preview";
 export { default as History } from "./History/index";
 export { default as Camera } from "./Camera/index";
 export { default as Splash } from "./Splash/index";
+export { default as CheckImages } from "./CheckImages/index";

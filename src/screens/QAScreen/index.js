@@ -20,13 +20,20 @@ import {
   TickIcon,
 } from "../../assets/icons";
 import { moderateScale } from "../../utils/Scaling";
+import { useAppState } from "../../context/AppStateContext";
+import { APIURLS } from "../../utils/ApiUrl";
+import api from "../../utils/Api";
 
 const QAScreen = ({ navigation, route }) => {
-  const imageData = route.params?.imageData;
+  const historyData = route.params?.historyData;
+  const { state } = useAppState();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [qaData, setQaData] = useState(null);
+  const [reportImage, setReportImage] = useState({});
   const { height, width } = Dimensions.get("window");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isReported, setIsReported] = useState(false);
+  const [isActive, setIsActive] = useState("after");
   const [checklistItems, setChecklistItems] = useState([
     { label: "Bad clipping", checked: false },
     { label: "Alignment - Rotation", checked: false },
@@ -36,6 +43,32 @@ const QAScreen = ({ navigation, route }) => {
 
     // Add more checklist items as needed
   ]);
+
+  const getImages = async () => {
+    if (state.token) {
+      const response = await api.get(
+        APIURLS.getImages(historyData?.collectionData?.collectionId),
+        state.token
+      );
+      setQaData(response?.processedImages);
+    }
+  };
+
+  const submitReportImage = async () => {
+    if (state.token) {
+      const response = await api.put(
+        APIURLS.reportImage(reportImage.id, reportImage.label, null),
+        state.token
+      );
+      if (response?.code === 1) {
+        getImages();
+      }
+    }
+  };
+
+  useEffect(() => {
+    getImages();
+  }, []);
 
   useEffect(() => {
     const lockOrientation = async () => {
@@ -68,13 +101,13 @@ const QAScreen = ({ navigation, route }) => {
 
   const handlePrev = () => {
     setCurrentIndex((prevIndex) =>
-      prevIndex > 0 ? prevIndex - 1 : imageData.length - 1
+      prevIndex > 0 ? prevIndex - 1 : qaData.length - 1
     );
   };
 
   const handleNext = () => {
     setCurrentIndex((prevIndex) =>
-      prevIndex < imageData.length - 1 ? prevIndex + 1 : 0
+      prevIndex < qaData.length - 1 ? prevIndex + 1 : 0
     );
   };
 
@@ -82,7 +115,8 @@ const QAScreen = ({ navigation, route }) => {
     setIsModalVisible(false);
   };
 
-  const handleChecklistToggle = (index) => {
+  const handleChecklistToggle = (item, index) => {
+    setReportImage({ ...qaData?.[currentIndex].data, ...item });
     setChecklistItems((prevItems) =>
       prevItems.map((item, i) =>
         i === index ? { ...item, checked: !item.checked } : item
@@ -92,7 +126,8 @@ const QAScreen = ({ navigation, route }) => {
 
   const onSubmit = () => {
     closeModal();
-    setIsReported(true);
+    // setIsReported(true);
+    submitReportImage();
   };
 
   return (
@@ -108,7 +143,11 @@ const QAScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity onPress={handlePrev}>
+        <TouchableOpacity
+          disabled={currentIndex === 0}
+          onPress={handlePrev}
+          style={{ opacity: currentIndex === 0 ? 0.5 : 1 }}
+        >
           <LeftArrow height={100} width={60} />
         </TouchableOpacity>
 
@@ -120,22 +159,55 @@ const QAScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
+      {qaData?.[currentIndex].data.isReported === 1 && (
+        <View style={styles.reportedIconStyle}>
+          <View style={styles.modalContainer}>
+            <ReportedIcon />
+            <View style={styles.reportedCon}>
+              <Text style={styles.reportedTxt}>REPORTED</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
       <Image
-        source={{ uri: imageData[currentIndex].data.doneImgUrl }}
+        source={{
+          uri:
+            isActive === "after"
+              ? qaData?.[currentIndex].data.doneImgUrl
+              : qaData?.[currentIndex].data.rawImgUrl,
+        }}
         resizeMode="contain"
         style={{ ...styles.image, height: height, width: "68%" }}
       />
 
       <View style={styles.arrowButton}>
         <View style={styles.buttonContainer}>
-          <View style={styles.beforeContainer}>
+          <TouchableOpacity
+            style={[
+              styles.beforeContainer,
+              isActive === "before" ? styles.activeBefore : {},
+            ]}
+            onPress={() => setIsActive("before")}
+          >
             <Text style={styles.beforeTxt}>Before</Text>
-          </View>
-          <View style={styles.afterContainer}>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.afterContainer,
+              isActive === "after" ? styles.activeAfter : {},
+            ]}
+            onPress={() => setIsActive("after")}
+          >
             <Text style={styles.afterTxt}>After</Text>
-          </View>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={handleNext}>
+        <TouchableOpacity
+          disabled={qaData?.length - 1 === currentIndex}
+          onPress={handleNext}
+          style={{ opacity: qaData?.length - 1 === currentIndex ? 0.5 : 1 }}
+        >
           <RightArrow height={100} width={60} />
         </TouchableOpacity>
 
@@ -172,7 +244,7 @@ const QAScreen = ({ navigation, route }) => {
                 <View key={item.label} style={styles.listContainer}>
                   <Text style={styles.labelTxt}>{item.label}</Text>
                   <TouchableOpacity
-                    onPress={() => handleChecklistToggle(index)}
+                    onPress={() => handleChecklistToggle(item, index)}
                     style={styles.checkboxContainer}
                   >
                     {item?.checked && <TickIcon width={15} />}
@@ -219,6 +291,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#222222",
     width: "100%",
   },
+  reportedIconStyle: {
+    position: "absolute",
+    left: "42%",
+    zIndex: 1,
+  },
   reportedCon: {
     backgroundColor: "#A50000",
     padding: 10,
@@ -253,14 +330,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   beforeTxt: {
-    color: "#87B2CA",
+    color: "#FFFFFF",
     fontSize: moderateScale(12),
     fontWeight: "600",
   },
   afterTxt: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontSize: moderateScale(12),
     fontWeight: "600",
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   beforeContainer: {
     borderRadius: 20,
@@ -270,14 +351,19 @@ const styles = StyleSheet.create({
   },
   afterContainer: {
     borderRadius: 40,
-    backgroundColor: "#2499DA",
-    padding: 15,
+    backgroundColor: "#D9D9D9",
+    padding: 10,
     paddingHorizontal: 20,
-    marginLeft: -20,
   },
-  buttonContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  activeBefore: {
+    backgroundColor: "#2499DA",
+    marginRight: -20,
+    padding: 15,
+  },
+  activeAfter: {
+    backgroundColor: "#2499DA",
+    marginLeft: -20,
+    padding: 15,
   },
   arrowButton: {
     alignItems: "center",
@@ -292,7 +378,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   image: {
-    resizeMode: "cover",
     borderRadius: 10,
     alignSelf: "center",
   },
@@ -334,7 +419,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
     backgroundColor: "#222222",

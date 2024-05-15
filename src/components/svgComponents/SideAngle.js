@@ -11,7 +11,7 @@ const SideAngle = ({ fill = "#17FF2D" }) => {
         fill="#27AAE1"
         stroke={fill}
         fillOpacity={0.4}
-        strokeWidth={6}
+        strokeWidth={4}
       />
     </Svg>
   );

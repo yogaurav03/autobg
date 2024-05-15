@@ -7,14 +7,20 @@ import {
   Image,
   Platform,
   FlatList,
+  Alert,
 } from "react-native";
 import { LeftArrow } from "../../assets/icons";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import * as ScreenOrientation from "expo-screen-orientation";
+import * as FileSystem from "expo-file-system";
+import * as Permissions from "expo-permissions";
+import * as MediaLibrary from "expo-media-library";
+import moment from "moment";
 import api from "../../utils/Api";
 import { APIURLS } from "../../utils/ApiUrl";
 import { useAppState } from "../../context/AppStateContext";
 import { moderateScale } from "../../utils/Scaling";
+import { failedImg } from "../../assets/images";
 
 const ProcessTray = ({ navigation, route }) => {
   const historyData = route.params?.historyData;
@@ -80,6 +86,110 @@ const ProcessTray = ({ navigation, route }) => {
     };
   }, []);
 
+  const imageUrl = {
+    uri: "https://media.voguebusiness.com/photos/5ef6493adf1073db3375835d/master/pass/kanye-west-gap-news-voguebus-mert-alas-and-marcus-piggott-june-20-story.jpg",
+  };
+
+  const handleDownload = async () => {
+    let date = moment().format("YYYYMMDDhhmmss");
+    let fileUri = FileSystem.documentDirectory + `${date}.jpg`;
+    for (const image of imageData?.processedImages) {
+      try {
+        const res = await FileSystem.downloadAsync(
+          image.data.doneImgUrl,
+          fileUri
+        );
+        saveFile(res.uri);
+      } catch (err) {
+        console.log("FS Err: ", err);
+      }
+    }
+    Alert.alert("All images have been downloaded and saved.");
+  };
+
+  const saveFile = async (fileUri) => {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status === "granted") {
+      try {
+        const asset = await MediaLibrary.createAssetAsync(fileUri);
+        const album = await MediaLibrary.getAlbumAsync("Download");
+        if (album == null) {
+          await MediaLibrary.createAlbumAsync("Download", asset, false);
+        } else {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        }
+      } catch (err) {
+        console.log("Save err: ", err);
+      }
+    } else if (status === "denied") {
+      Alert.alert("please allow permissions to download");
+    }
+  };
+
+  const handleDownloadAndroid = async () => {
+    const images = imageData?.processedImages || []; // Safety check
+    const assets = [];
+
+    for (const image of images) {
+      const date = moment().format("YYYYMMDDhhmmss");
+      const fileUri = FileSystem.documentDirectory + `${date}.jpg`;
+
+      try {
+        const response = await FileSystem.downloadAsync(
+          image.data.doneImgUrl,
+          fileUri
+        );
+        const asset = await saveFileAndroid(response.uri);
+        if (asset) {
+          assets.push(asset);
+        }
+      } catch (err) {
+        console.log("FS Err: ", err);
+      }
+    }
+
+    if (assets.length > 0) {
+      try {
+        // After all images are downloaded, create or update the album
+        await updateAlbum(assets);
+        Alert.alert("All images have been downloaded and saved.");
+      } catch (err) {
+        console.log("Album Update Error:", err);
+      }
+    } else {
+      Alert.alert("No images were downloaded.");
+    }
+  };
+
+  const saveFileAndroid = async (fileUri) => {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status === "granted") {
+      return await MediaLibrary.createAssetAsync(fileUri);
+    } else {
+      Alert.alert("Please allow permissions to download.");
+      return null; // Return null if permissions are not granted
+    }
+  };
+
+  const updateAlbum = async (assets) => {
+    const album = await MediaLibrary.getAlbumAsync("Download");
+    if (album === null) {
+      // If the album doesn't exist, create it with the first asset on Android
+      await MediaLibrary.createAlbumAsync("Download", assets[0], false);
+      if (assets.length > 1) {
+        // Add the rest of the assets if there are more
+        await MediaLibrary.addAssetsToAlbumAsync(
+          assets.slice(1),
+          assets[0],
+          false
+        );
+      }
+    } else {
+      // Add all assets to the existing album
+      await MediaLibrary.addAssetsToAlbumAsync(assets, album, false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.container}>
@@ -118,7 +228,9 @@ const ProcessTray = ({ navigation, route }) => {
             </View>
             <View style={styles.dateContainer}>
               <Text style={styles.numberTxt}>
-                {historyData?.processedImgCount}
+                {historyData?.processedImgCount === 0
+                  ? historyData?.failedImgCount
+                  : historyData?.processedImgCount}
               </Text>
               <Text style={styles.photosTxt}>Photos</Text>
             </View>
@@ -127,12 +239,20 @@ const ProcessTray = ({ navigation, route }) => {
 
         <View style={styles.historyContainer}>
           <View style={styles.imagesContainer}>
-            <FlatList
-              renderItem={renderImages}
-              data={imageData?.processedImages}
-              numColumns={2}
-              keyExtractor={(item) => item.id}
-            />
+            {imageData?.processedImages?.length !== 0 ? (
+              <FlatList
+                renderItem={renderImages}
+                data={imageData?.processedImages}
+                numColumns={2}
+                keyExtractor={(item) => item.id}
+              />
+            ) : (
+              <Image
+                source={failedImg}
+                style={{ height: "70%", width: "100%" }}
+              />
+              // <Text style={styles.bottomText}>Failed Images Found</Text>
+            )}
           </View>
         </View>
       </View>
@@ -142,13 +262,19 @@ const ProcessTray = ({ navigation, route }) => {
             onPress={() =>
               navigation.navigate("QAScreenScreen", {
                 imageData: imageData?.processedImages,
+                historyData: historyData,
               })
             }
             style={styles.qaContainer}
           >
             <Text style={styles.btnText}>Check for Q&A</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.downloadContainer}>
+          <TouchableOpacity
+            onPress={
+              Platform.OS === "ios" ? handleDownload : handleDownloadAndroid
+            }
+            style={styles.downloadContainer}
+          >
             <Text style={styles.btnText}>Download All</Text>
           </TouchableOpacity>
         </View>
@@ -162,6 +288,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF", // Background color of the screen
+    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   btnText: {
     fontWeight: "bold",

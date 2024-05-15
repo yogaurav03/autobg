@@ -1,0 +1,66 @@
+import React from "react";
+import { Svg, G, Path, Defs, ClipPath, Rect } from "react-native-svg";
+
+const DoorView = () => {
+  return (
+    <Svg width="633" height="396" viewBox="0 0 633 396" fill="none">
+      <Defs>
+        <ClipPath id="clip0_260_427">
+          <Rect width="633" height="410" fill="white" />
+        </ClipPath>
+      </Defs>
+      <G clipPath="url(#clip0_260_427)">
+        <Path
+          d="M632.511 200.765L217.955 23.7008C217.955 23.7008 65.1257 -30.8681 15.7312 30.0536C-33.6633 90.9753 58.768 200.765 58.768 200.765L230.752 409.185"
+          stroke="#6BCCE0"
+          strokeWidth="3"
+          strokeMiterlimit="10"
+        />
+        <Path
+          d="M301.666 404.217L59.9095 167.128C59.9095 167.128 -1.71147 101.726 2.03795 61.8176"
+          stroke="#6BCCE0"
+          strokeWidth="2"
+          strokeMiterlimit="10"
+        />
+        <Path
+          d="M172.147 18.9769L564.288 214.122L449.768 388.905L54.1223 74.7675C54.1223 74.7675 41.3253 66.0527 68.0603 53.8358C94.7953 41.6189 149.08 22.9677 160.41 19.547C170.436 16.6149 172.147 18.9769 172.147 18.9769Z"
+          stroke="#6BCCE0"
+          strokeWidth="3"
+          strokeMiterlimit="10"
+        />
+        <Path
+          d="M170.028 98.8757C196.632 98.8757 218.2 86.3683 218.2 70.9397C218.2 55.5111 196.632 43.0037 170.028 43.0037C143.423 43.0037 121.856 55.5111 121.856 70.9397C121.856 86.3683 143.423 98.8757 170.028 98.8757Z"
+          stroke="#6BCCE0"
+          strokeWidth="3"
+          strokeMiterlimit="10"
+        />
+        <Path
+          d="M148.265 127.056L253.412 67.8447L361.901 122.658L489.87 187.408L385.294 307.052L184.211 154.341L148.265 127.056Z"
+          stroke="#6BCCE0"
+          strokeWidth="3"
+          strokeMiterlimit="10"
+        />
+        <Path
+          d="M508.454 199.625L415.533 313.405C415.533 313.405 408.524 321.549 415.533 327.902C422.543 334.255 453.272 353.476 453.272 353.476C453.272 353.476 461.423 354.617 466.069 347.694C470.715 340.689 551.491 226.339 550.92 221.126C550.35 215.914 513.181 199.625 513.181 199.625H508.454Z"
+          stroke="#6BCCE0"
+          strokeWidth="3"
+          strokeMiterlimit="10"
+        />
+        <Path
+          d="M206.137 171.037L316.908 99.9346"
+          stroke="#6BCCE0"
+          strokeWidth="3"
+          strokeMiterlimit="10"
+        />
+        <Path
+          d="M289.439 233.017L407.138 145.544"
+          stroke="#6BCCE0"
+          strokeWidth="3"
+          strokeMiterlimit="10"
+        />
+      </G>
+    </Svg>
+  );
+};
+
+export default DoorView;

@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Platform,
   SafeAreaView,
+  KeyboardAvoidingView,
+  ScrollView,
 } from "react-native";
 import { CarIcon, LeftArrow } from "../../assets/icons";
 import { moderateScale } from "../../utils/Scaling";
@@ -16,54 +18,66 @@ const FolderName = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.container}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <LeftArrow />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <LeftArrow />
+              <Text style={styles.backText}>Back</Text>
+            </TouchableOpacity>
 
-        <Text style={styles.header}>Enter</Text>
-        <Text style={styles.folderName}>Folder Name</Text>
+            <Text style={styles.header}>Enter</Text>
+            <Text style={styles.folderName}>Folder Name</Text>
 
-        <View style={styles.lineContainer}>
-          <View style={styles.lineBlue} />
-          <View style={styles.lineGray} />
-          <View style={styles.lineGray} />
-        </View>
+            <View style={styles.lineContainer}>
+              <View style={styles.lineBlue} />
+              <View style={styles.lineGray} />
+              <View style={styles.lineGray} />
+            </View>
 
-        <View style={styles.subContainer}>
-          <CarIcon width={200} height={200} />
+            <View style={styles.subContainer}>
+              <CarIcon width={200} height={200} />
 
-          <TextInput
-            placeholder="License plate number"
-            onChangeText={setNumberPlate}
-            style={styles.input}
-          />
+              <TextInput
+                placeholder="License plate number"
+                onChangeText={setNumberPlate}
+                style={styles.input}
+              />
 
-          <View style={styles.hintBox}>
-            <Text style={styles.hintText}>Hint</Text>
-            <Text style={styles.hintDescText}>
-              We save the folder by vehicle {"\n"} Registration number.
-            </Text>
-          </View>
+              <View style={styles.hintBox}>
+                <Text style={styles.hintText}>Hint</Text>
+                <Text style={styles.hintDescText}>
+                  We save the folder by vehicle {"\n"} Registration number.
+                </Text>
+              </View>
 
-          <TouchableOpacity
-            onPress={() =>
-              route.params?.id === 3
-                ? navigation.navigate("SelectImageAnglesScreen")
-                : route.params?.id === 2
-                ? navigation.navigate("SelectBackgroundScreen")
-                : navigation.navigate("SelectTemplateScreen", {
-                    numberPlate: numberPlate,
-                  })
-            }
-            style={styles.nextButton}
-          >
-            <Text style={styles.nextButtonText}>NEXT</Text>
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity
+                onPress={() =>
+                  route.params?.id === 3
+                    ? navigation.navigate("SelectImageAnglesScreen")
+                    : route.params?.id === 2
+                    ? navigation.navigate("SelectBackgroundScreen")
+                    : navigation.navigate("SelectTemplateScreen", {
+                        numberPlate: numberPlate,
+                        screenId: route.params?.id,
+                      })
+                }
+                disabled={numberPlate === "" ? true : false}
+                style={[
+                  styles.nextButton,
+                  numberPlate === "" ? styles.disabledBtn : {},
+                ]}
+              >
+                <Text style={styles.nextButtonText}>NEXT</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </SafeAreaView>
   );
@@ -72,8 +86,9 @@ const FolderName = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: Platform.OS === "android" ? 10 : 20,
+    padding: Platform.OS === "android" ? 10 : 10,
     backgroundColor: "#EAF7FF",
+    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   backButton: {
     flexDirection: "row",
@@ -153,6 +168,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 10,
+  },
+  disabledBtn: {
+    opacity: 0.5,
   },
   nextButtonText: {
     color: "#FFF",
