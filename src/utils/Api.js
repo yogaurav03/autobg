@@ -29,9 +29,13 @@ const get = async (url, token, params = {}) => {
 };
 
 // POST method
-const post = async (url, data) => {
+const post = async (url, data, token) => {
   try {
-    const response = await api.post(url, data);
+    const response = await api.post(url, data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   } catch (error) {
     // Handle error
@@ -41,9 +45,13 @@ const post = async (url, data) => {
 };
 
 // PUT method
-const put = async (url, data) => {
+const put = async (url, data, token) => {
   try {
-    const response = await api.put(url, data);
+    const response = await api.put(url, data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   } catch (error) {
     // Handle error
@@ -53,9 +61,13 @@ const put = async (url, data) => {
 };
 
 // DELETE method
-const del = async (url) => {
+const del = async (url, token) => {
   try {
-    const response = await api.delete(url);
+    const response = await api.delete(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   } catch (error) {
     // Handle error

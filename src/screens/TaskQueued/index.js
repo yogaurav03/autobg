@@ -1,20 +1,48 @@
-import React, { useEffect } from "react";
-import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
-import * as ScreenOrientation from "expo-screen-orientation";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Dimensions,
+} from "react-native";
+import Orientation from "react-native-orientation-locker";
 import { Timer } from "../../components";
 import { moderateScale } from "../../utils/Scaling";
 
-const TaskQueued = ({ navigation }) => {
+const TaskQueued = ({ navigation, route }) => {
+  const numberPlate = route.params?.numberPlate;
+  const collectionTemplate = route.params?.collectionTemplate;
+  const [orientation, setOrientation] = useState(null);
+
+  const determineAndSetOrientation = () => {
+    let width = Dimensions.get("window").width;
+    let height = Dimensions.get("window").height;
+
+    if (width < height) {
+      setOrientation("PORTRAIT");
+    } else {
+      setOrientation("LANDSCAPE");
+    }
+  };
+
+  useEffect(() => {
+    setTimeout(() => {
+      determineAndSetOrientation();
+    }, 1000);
+  }, []);
+
   useEffect(() => {
     const unsubscribeFocus = navigation.addListener("focus", () => {
       // Optionally introduce a delay if needed
       setTimeout(() => {
-        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+        Orientation.lockToPortrait();
+        determineAndSetOrientation();
       }, 100); // Delay for 100 milliseconds, adjust as necessary
     });
 
     const unsubscribeBlur = navigation.addListener("blur", () => {
-      ScreenOrientation.unlockAsync();
+      determineAndSetOrientation();
     });
 
     return () => {
@@ -23,16 +51,43 @@ const TaskQueued = ({ navigation }) => {
     };
   }, [navigation]);
 
+  const isLandscape = orientation === "LANDSCAPE";
+
   return (
     <View style={styles.container}>
-      <View style={styles.firstContainer}>
-        <Text style={styles.qadoneTxt}>Task Queued</Text>
-        <Timer totalTime={900} />
-        <Text style={styles.vehicleTxt}>Mazda Rx7</Text>
-        <Text style={styles.noTxt}>225Mb</Text>
-        <View style={styles.hintContainer}>
-          <Text style={styles.hintTxt}>Hint</Text>
-          <Text style={styles.hintDesc}>
+      <View style={{ ...styles.firstContainer, flex: isLandscape ? 0 : 0.6 }}>
+        <Text
+          style={{
+            ...styles.qadoneTxt,
+            fontSize: isLandscape ? moderateScale(26) : moderateScale(30),
+          }}
+        >
+          Task Queued
+        </Text>
+        <Timer totalTime={1200} />
+        <Text style={styles.vehicleTxt}>{numberPlate}</Text>
+        {/* <Text style={styles.noTxt}>{collectionTemplate}</Text> */}
+        <View
+          style={{
+            ...styles.hintContainer,
+            padding: isLandscape ? 5 : 10,
+            marginVertical: isLandscape ? 10 : 20,
+          }}
+        >
+          <Text
+            style={{
+              ...styles.hintTxt,
+              fontSize: isLandscape ? moderateScale(10) : moderateScale(14),
+            }}
+          >
+            Hint
+          </Text>
+          <Text
+            style={{
+              ...styles.hintDesc,
+              fontSize: isLandscape ? moderateScale(8) : moderateScale(10),
+            }}
+          >
             Your task has been queued, we will notify you as soon as its done,
             make sure the app have permissions to push notifications
           </Text>
@@ -44,7 +99,15 @@ const TaskQueued = ({ navigation }) => {
           onPress={() => navigation.navigate("MainScreen")}
           style={styles.goBackContainer}
         >
-          <Text style={styles.goBackTxt}>Go back to home</Text>
+          <Text
+            style={{
+              ...styles.goBackTxt,
+              padding: isLandscape ? 10 : 20,
+              fontSize: isLandscape ? moderateScale(14) : moderateScale(16),
+            }}
+          >
+            Go back to home
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

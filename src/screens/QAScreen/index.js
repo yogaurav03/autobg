@@ -9,8 +9,10 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Platform,
 } from "react-native";
-import * as ScreenOrientation from "expo-screen-orientation";
+import Orientation from "react-native-orientation-locker";
+import { ImageZoom } from "@likashefqet/react-native-image-zoom";
 import {
   BottomArrow,
   CrossIcon,
@@ -29,6 +31,7 @@ const QAScreen = ({ navigation, route }) => {
   const { state } = useAppState();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [qaData, setQaData] = useState(null);
+
   const [reportImage, setReportImage] = useState({});
   const { height, width } = Dimensions.get("window");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -62,6 +65,13 @@ const QAScreen = ({ navigation, route }) => {
       );
       if (response?.code === 1) {
         getImages();
+        setChecklistItems([
+          { label: "Bad clipping", checked: false },
+          { label: "Alignment - Rotation", checked: false },
+          { label: "Road Position", checked: false },
+          { label: "Guidelines Ignored", checked: false },
+          { label: "Number Plate", checked: false },
+        ]);
       }
     }
   };
@@ -71,24 +81,21 @@ const QAScreen = ({ navigation, route }) => {
   }, []);
 
   useEffect(() => {
-    const lockOrientation = async () => {
-      // Lock the orientation to landscape
-      await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.LANDSCAPE
-      );
-    };
+    // Lock orientation to landscape when screen is focused
+    const unsubscribeFocus = navigation.addListener("focus", () => {
+      Orientation.lockToLandscape();
+    });
 
-    lockOrientation();
+    // Unlock or keep landscape when screen is blurred
+    const unsubscribeBlur = navigation.addListener("blur", () => {
+      Orientation.lockToPortrait(); // Adjust if you want a default portrait when leaving
+    });
 
-    // Clean up the orientation lock on component unmount
     return () => {
-      const unlockOrientation = async () => {
-        await ScreenOrientation.unlockAsync(); // This will unlock the orientation
-      };
-
-      unlockOrientation();
+      unsubscribeFocus();
+      unsubscribeBlur();
     };
-  }, []);
+  }, [navigation]);
 
   const handleFail = () => {
     setIsModalVisible(true);
@@ -143,13 +150,15 @@ const QAScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          disabled={currentIndex === 0}
-          onPress={handlePrev}
-          style={{ opacity: currentIndex === 0 ? 0.5 : 1 }}
-        >
-          <LeftArrow height={100} width={60} />
-        </TouchableOpacity>
+        {qaData?.length === 1 ? null : (
+          <TouchableOpacity
+            disabled={currentIndex === 0}
+            onPress={handlePrev}
+            style={{ opacity: currentIndex === 0 ? 0.5 : 1 }}
+          >
+            <LeftArrow height={100} width={60} />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           onPress={() => handleFail()}
@@ -170,7 +179,17 @@ const QAScreen = ({ navigation, route }) => {
         </View>
       )}
 
-      <Image
+      <ImageZoom
+        uri={
+          isActive === "after"
+            ? qaData?.[currentIndex].data.doneImgUrl
+            : qaData?.[currentIndex].data.rawImgUrl
+        }
+        resizeMode="contain"
+        style={{ ...styles.image, height: height, width: "68%" }}
+      />
+
+      {/* <Image
         source={{
           uri:
             isActive === "after"
@@ -179,7 +198,7 @@ const QAScreen = ({ navigation, route }) => {
         }}
         resizeMode="contain"
         style={{ ...styles.image, height: height, width: "68%" }}
-      />
+      /> */}
 
       <View style={styles.arrowButton}>
         <View style={styles.buttonContainer}>
@@ -203,16 +222,22 @@ const QAScreen = ({ navigation, route }) => {
             <Text style={styles.afterTxt}>After</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          disabled={qaData?.length - 1 === currentIndex}
-          onPress={handleNext}
-          style={{ opacity: qaData?.length - 1 === currentIndex ? 0.5 : 1 }}
-        >
-          <RightArrow height={100} width={60} />
-        </TouchableOpacity>
+        {qaData?.length === 1 ? null : (
+          <TouchableOpacity
+            disabled={qaData?.length - 1 === currentIndex}
+            onPress={handleNext}
+            style={{ opacity: qaData?.length - 1 === currentIndex ? 0.5 : 1 }}
+          >
+            <RightArrow height={100} width={60} />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
-          onPress={() => navigation.navigate("QADoneScreen")}
+          onPress={() =>
+            navigation.navigate("QADoneScreen", {
+              historyData: historyData,
+            })
+          }
           style={styles.passContainer}
         >
           <Text style={styles.buttonText}>Pass</Text>
@@ -226,8 +251,16 @@ const QAScreen = ({ navigation, route }) => {
         supportedOrientations={["portrait", "landscape"]}
         onRequestClose={closeModal}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+        <View style={{ ...styles.modalContainer, flex: 0 }}>
+          <View
+            style={[
+              styles.modalContent,
+              Platform.OS === "ios" && {
+                left: "60%",
+                top: "10%",
+              },
+            ]}
+          >
             <View style={styles.titleContainer}>
               <TouchableOpacity onPress={closeModal}>
                 <CrossIcon height={18} width={18} />
@@ -236,10 +269,14 @@ const QAScreen = ({ navigation, route }) => {
               <Text style={styles.modalTitle}>
                 Select what's wrong in image{" "}
               </Text>
-              <BottomArrow height={18} width={18} />
+              {/* <BottomArrow height={18} width={18} /> */}
+              <View />
             </View>
 
-            <ScrollView style={styles.checklistContainer}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={styles.checklistContainer}
+            >
               {checklistItems.map((item, index) => (
                 <View key={item.label} style={styles.listContainer}>
                   <Text style={styles.labelTxt}>{item.label}</Text>
@@ -342,28 +379,27 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#D9D9D9",
+    borderRadius: 8,
+    marginTop: 20,
   },
   beforeContainer: {
-    borderRadius: 20,
+    borderRadius: 8,
     backgroundColor: "#D9D9D9",
-    padding: 10,
-    paddingHorizontal: 20,
+    padding: 8,
+    paddingHorizontal: 15,
   },
   afterContainer: {
-    borderRadius: 40,
+    borderRadius: 8,
     backgroundColor: "#D9D9D9",
-    padding: 10,
-    paddingHorizontal: 20,
+    padding: 8,
+    paddingHorizontal: 15,
   },
   activeBefore: {
     backgroundColor: "#2499DA",
-    marginRight: -20,
-    padding: 15,
   },
   activeAfter: {
     backgroundColor: "#2499DA",
-    marginLeft: -20,
-    padding: 15,
   },
   arrowButton: {
     alignItems: "center",
@@ -406,6 +442,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: 20,
   },
   iconStyle: {
     flexDirection: "row",
@@ -424,7 +461,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#222222",
     borderRadius: 10,
     padding: 20,
-    width: "60%",
+    width: "80%",
   },
   titleContainer: {
     flexDirection: "row",

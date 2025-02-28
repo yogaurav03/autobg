@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Dimensions } from "react-native";
-import { Accelerometer } from "expo-sensors";
-import { LinearGradient } from "expo-linear-gradient";
+import { useDeviceOrientation } from "@react-native-community/hooks";
+import LinearGradient from "react-native-linear-gradient";
+import {
+  setUpdateIntervalForType,
+  SensorTypes,
+  accelerometer,
+} from "react-native-sensors";
 
 const Leveler = ({ setIsCentered }) => {
   const [data, setData] = useState({
@@ -10,31 +15,56 @@ const Leveler = ({ setIsCentered }) => {
     z: 0,
   });
 
-  useEffect(() => {
-    Accelerometer.setUpdateInterval(16);
-    const subscription = Accelerometer.addListener((accelerometerData) => {
-      setData(accelerometerData);
-    });
+  const [filteredData, setFilteredData] = useState({ x: 0, y: 0, z: 0 });
+  const ALPHA = 0.3; // Low-pass filter constant (adjust for sensitivity)
 
-    return () => subscription.remove();
+  const screenOrientation = useDeviceOrientation();
+  const [orientation, setOrientation] = useState(screenOrientation);
+
+  useEffect(() => {
+    setUpdateIntervalForType(SensorTypes.accelerometer, 16);
+
+    const observer = {
+      next: (accelerometerData) => {
+        setData(accelerometerData);
+
+        // Apply low-pass filter
+        setFilteredData((prev) => ({
+          x: prev.x + ALPHA * (accelerometerData.x - prev.x),
+          y: prev.y + ALPHA * (accelerometerData.y - prev.y),
+          z: prev.z + ALPHA * (accelerometerData.z - prev.z),
+        }));
+      },
+      error: (error) => console.error("Error with accelerometer:", error),
+    };
+
+    const subscription = accelerometer.subscribe(observer);
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Determine leveler position based on accelerometer data
   const { height } = Dimensions.get("window");
-  // Assuming y-axis for simplicity; accelerometer data range is from -1 to 1
-  const levelerPosition = ((data.y + 1) / 2) * height;
-  const centerOfScreen = height / 2;
-  const tolerance = 5;
+  const levelerPosition = ((filteredData.y + 1) / 2.3) * height;
+  const centerOfScreen = height / 2.3;
+  const tolerance = 40;
 
   useEffect(() => {
-    setIsCentered(Math.abs(levelerPosition - centerOfScreen) <= tolerance);
-  }, [levelerPosition, centerOfScreen, tolerance]);
+    const isHeldUp = Math.abs(filteredData.z) < 0.3;
+    const isCentered = Math.abs(levelerPosition - centerOfScreen) <= tolerance;
+
+    if (screenOrientation === "landscape" && isHeldUp && isCentered) {
+      setIsCentered(true);
+    } else {
+      setIsCentered(false);
+    }
+  }, [levelerPosition, centerOfScreen, tolerance, orientation, filteredData]);
 
   return (
     <View style={styles.levelerContainer}>
       <View style={styles.levelerVerticalLine}>
         <LinearGradient
-          // The colors are set from transparent to semi-transparent and back to transparent
           colors={["transparent", "#38EF76", "transparent"]}
           style={styles.levelerGradient}
           start={{ x: 0.5, y: 0 }}

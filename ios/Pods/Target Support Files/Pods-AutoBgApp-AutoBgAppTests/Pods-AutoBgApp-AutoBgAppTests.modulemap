@@ -1,0 +1,6 @@
+module Pods_AutoBgApp_AutoBgAppTests {
+  umbrella header "Pods-AutoBgApp-AutoBgAppTests-umbrella.h"
+
+  export *
+  module * { export * }
+}

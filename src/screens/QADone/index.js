@@ -1,17 +1,21 @@
 import React, { useEffect } from "react";
 import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
-import * as ScreenOrientation from "expo-screen-orientation";
+import Orientation from "react-native-orientation-locker";
 import { TickIcon } from "../../assets/icons";
 import { moderateScale } from "../../utils/Scaling";
 
-const QADone = ({ navigation }) => {
+const QADone = ({ navigation, route }) => {
+  const historyData = route.params?.historyData;
+  const numberPlate = historyData?.collectionData?.numberPlate;
+  const collectionTemplate = historyData?.collectionData?.collectionTemplate;
+
   useEffect(() => {
     const unsubscribeFocus = navigation.addListener("focus", () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      Orientation.lockToLandscape();
     });
 
     const unsubscribeBlur = navigation.addListener("blur", () => {
-      ScreenOrientation.unlockAsync();
+      Orientation.unlockAllOrientations(); // Adjust if you want a default portrait when leaving
     });
 
     return () => {
@@ -26,8 +30,8 @@ const QADone = ({ navigation }) => {
       <View style={styles.tickContainer}>
         <TickIcon width={30} />
       </View>
-      <Text style={styles.vehicleTxt}>Mazda Rx7</Text>
-      <Text style={styles.noTxt}>225Mb</Text>
+      <Text style={styles.vehicleTxt}>{numberPlate}</Text>
+      {/* <Text style={styles.noTxt}>{collectionTemplate}</Text> */}
       <View style={styles.btnContainer}>
         <TouchableOpacity
           onPress={() => navigation.navigate("MainScreen")}
@@ -36,7 +40,12 @@ const QADone = ({ navigation }) => {
           <Text style={styles.goBackTxt}>Go back to home</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => navigation.navigate("TaskQueuedScreen")}
+          onPress={() =>
+            navigation.navigate("TaskQueuedScreen", {
+              numberPlate: numberPlate,
+              collectionTemplate: collectionTemplate,
+            })
+          }
           style={{ ...styles.goBackContainer, backgroundColor: "#2492FE" }}
         >
           <Text style={styles.goBackTxt}>Resubmit for correction</Text>

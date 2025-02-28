@@ -1,0 +1,9 @@
+export { default as CarWheel } from "./wheel.svg";
+export { default as CarAcConsole } from "./acConsole.svg";
+export { default as CarTrunk } from "./carTrunk.svg";
+export { default as PassengerBackViewRight } from "./passengerBackViewRight.svg";
+export { default as DriverSideView } from "./driverSideView.svg";
+export { default as MidConsoleView } from "./midConsoleView.svg";
+export { default as MidConsoleViewRight } from "./midConsoleViewRight.svg";
+export { default as PassengerSideView } from "./passengerSideView.svg";
+export { default as PassengerBackViewLeft } from "./passengerBackViewLeft.svg";

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Text,
   ScrollView,
+  StatusBar,
 } from "react-native";
 import { LeftArrow } from "../../assets/icons";
 import Terms from "../../components/Terms";
@@ -16,7 +17,7 @@ import { moderateScale } from "../../utils/Scaling";
 const ForgotPassword = ({ navigation, route }) => {
   const screenName = route?.params?.screenName;
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity
@@ -39,6 +40,12 @@ const ForgotPassword = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+    padding: Platform.OS === "android" ? 10 : 20,
+  },
   container: {
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,

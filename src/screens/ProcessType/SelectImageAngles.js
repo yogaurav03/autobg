@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,24 +7,35 @@ import {
   Platform,
   SafeAreaView,
   FlatList,
+  Image,
+  StatusBar,
+  Alert,
 } from "react-native";
-import {
-  AcMedia,
-  BackAngle,
-  BootSpace,
-  CenterDashboard,
-  DoorView,
-  FrontAngle,
-  LeftAngle,
-  LeftArrow,
-  LeftSideAngle,
-  Meter,
-  RightAngle,
-  RightSideAngle,
-  SpeedoMeter,
-  Steering,
-} from "../../assets/icons";
+import { PERMISSIONS, RESULTS, request } from "react-native-permissions";
+import { LeftArrow } from "../../assets/icons";
 import { moderateScale } from "../../utils/Scaling";
+import Orientation from "react-native-orientation-locker";
+import {
+  backCar,
+  backLeftAngleCar,
+  backRightAngleCar,
+  frontCar,
+  leftAngleCar,
+  leftSideCar,
+  rightAngleCar,
+  rightSideCar,
+} from "../../assets/images";
+import {
+  CarAcConsole,
+  CarTrunk,
+  CarWheel,
+  DriverSideView,
+  MidConsoleView,
+  MidConsoleViewRight,
+  PassengerBackViewLeft,
+  PassengerBackViewRight,
+  PassengerSideView,
+} from "../../assets/icons/interiorAngles";
 
 const SelectImageAngles = ({ navigation, route }) => {
   const batchId = route?.params?.batchId;
@@ -32,24 +43,60 @@ const SelectImageAngles = ({ navigation, route }) => {
   const [isExteriorSelected, setIsExteriorSelected] = useState(true);
   const [selectedAngles, setSelectedAngles] = useState([]);
   const [selectedInteriorAngles, setSelectedInteriorAngles] = useState([]);
+  const [isLeftHandSelected, setIsLeftHandSelected] = useState(true);
+  const [isRightHandSelected, setIsRightHandSelected] = useState(false);
+
+  const handleLeftHandPress = () => {
+    setIsLeftHandSelected(true);
+    setIsRightHandSelected(false);
+  };
+
+  const handleRightHandPress = () => {
+    setIsRightHandSelected(true);
+    setIsLeftHandSelected(false);
+  };
+
+  useEffect(() => {
+    const unsubscribeFocus = navigation.addListener("focus", () => {
+      Orientation.lockToPortrait();
+    });
+
+    const unsubscribeBlur = navigation.addListener("blur", () => {
+      Orientation.unlockAllOrientations();
+    });
+
+    return () => {
+      unsubscribeFocus();
+      unsubscribeBlur();
+    };
+  }, [navigation]);
 
   const carAngles = [
-    { id: 1, icon: <FrontAngle /> },
-    { id: 2, icon: <BackAngle /> },
-    { id: 3, icon: <LeftAngle /> },
-    { id: 4, icon: <RightAngle /> },
-    { id: 5, icon: <LeftSideAngle /> },
-    { id: 6, icon: <RightSideAngle /> },
+    { id: 1, icon: frontCar },
+    { id: 2, icon: rightAngleCar },
+    { id: 3, icon: rightSideCar },
+    { id: 4, icon: backRightAngleCar },
+    { id: 5, icon: backCar },
+    { id: 6, icon: backLeftAngleCar },
+    { id: 7, icon: leftSideCar },
+    { id: 8, icon: leftAngleCar },
   ];
   const interiorAngles = [
-    { id: 1, icon: <BootSpace width={100} /> },
-    { id: 2, icon: <CenterDashboard width={100} /> },
-    { id: 3, icon: <AcMedia width={100} /> },
-    { id: 4, icon: <SpeedoMeter width={100} /> },
-    { id: 5, icon: <DoorView width={100} /> },
-    { id: 6, icon: <Meter width={100} /> },
-    { id: 7, icon: <Steering width={100} /> },
-    { id: 8, icon: "" },
+    { id: 1, icon: <CarWheel width={100} height={100} /> },
+    { id: 2, icon: <CarAcConsole width={100} height={100} /> },
+    { id: 3, icon: <CarTrunk width={100} height={100} /> },
+    { id: 4, icon: <PassengerBackViewLeft width={100} height={100} /> },
+    { id: 5, icon: <PassengerBackViewRight width={100} height={100} /> },
+    {
+      id: 6,
+      icon: isLeftHandSelected ? (
+        <MidConsoleView width={100} height={100} />
+      ) : (
+        <MidConsoleViewRight width={100} height={100} />
+      ),
+    },
+    { id: 7, icon: <PassengerSideView width={100} height={100} /> },
+    { id: 8, icon: <DriverSideView width={100} height={100} /> },
   ];
   const handleSelectAll = () => {
     if (selectedAngles.length === carAngles.length) {
@@ -87,33 +134,90 @@ const SelectImageAngles = ({ navigation, route }) => {
         selectedAngles.includes(item.id) && styles.selectedAngleButton,
       ]}
     >
-      {item.icon}
+      <Image
+        style={{ width: 120, height: 120 }}
+        resizeMode="contain"
+        source={item.icon}
+      />
     </TouchableOpacity>
   );
 
-  const renderInteriorItem = ({ item }) =>
-    item.id === 8 ? (
-      <View style={[styles.angleInvisibleButton]}>{item.icon}</View>
-    ) : (
-      <TouchableOpacity
-        onPress={() => {
-          const newSelectedAngles = selectedInteriorAngles.includes(item.id)
-            ? selectedInteriorAngles.filter((id) => id !== item.id)
-            : [...selectedInteriorAngles, item.id];
-          setSelectedInteriorAngles(newSelectedAngles);
+  const renderInteriorItem = ({ item }) => (
+    <TouchableOpacity
+      onPress={() => {
+        const newSelectedAngles = selectedInteriorAngles.includes(item.id)
+          ? selectedInteriorAngles.filter((id) => id !== item.id)
+          : [...selectedInteriorAngles, item.id];
+        setSelectedInteriorAngles(newSelectedAngles);
+      }}
+      style={[
+        styles.angleButton,
+        selectedInteriorAngles.includes(item.id) && styles.selectedAngleButton,
+      ]}
+    >
+      <View
+        style={{
+          height: 150,
+          justifyContent: "center",
+          alignItems: "center",
         }}
-        style={[
-          styles.angleButton,
-          selectedInteriorAngles.includes(item.id) &&
-            styles.selectedAngleButton,
-        ]}
       >
         {item.icon}
-      </TouchableOpacity>
-    );
+      </View>
+    </TouchableOpacity>
+  );
+
+  // useEffect(() => {
+  //   (async () => {
+  //     await Camera.requestCameraPermissionsAsync();
+  //   })();
+  // }, []);
+
+  const requestCameraPermission = async () => {
+    let permission;
+    if (Platform.OS === "android") {
+      permission = PERMISSIONS.ANDROID.CAMERA;
+    } else {
+      permission = PERMISSIONS.IOS.CAMERA;
+    }
+
+    try {
+      const result = await request(permission);
+      // setPermissionStatus(result);
+      console.log("result", result);
+      if (result === RESULTS.GRANTED) {
+        setTimeout(() => {
+          navigation.navigate("CameraScreen", {
+            selectedAngles: selectedAngles,
+            selectedInteriorAngles: selectedInteriorAngles,
+            batchId: batchId,
+            selectedTemplateId: selectedTemplateId,
+            screenId: route?.params?.screenId,
+            isLeftHandSelected: isLeftHandSelected,
+          });
+        }, 1000);
+      } else if (result === RESULTS.DENIED) {
+        Alert.alert("Permission Denied", "Camera access is denied.");
+      } else if (result === RESULTS.BLOCKED) {
+        Alert.alert(
+          "Permission Blocked",
+          "Camera access is blocked. Please enable it from settings."
+        );
+      }
+    } catch (error) {
+      console.error("Camera permission error:", error);
+    }
+  };
+
+  const onClickNext = async () => {
+    requestCameraPermission();
+  };
+
+  const isButtonDisabled =
+    selectedAngles.length || selectedInteriorAngles.length;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
       <View style={styles.container}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -167,6 +271,59 @@ const SelectImageAngles = ({ navigation, route }) => {
             </Text>
           </TouchableOpacity>
         </View>
+        {!isExteriorSelected && (
+          <View style={{ ...styles.headerContainer, marginBottom: 0 }}>
+            <Text style={styles.promptText}>Select steering side</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "#E0E0E0",
+                elevation: 2,
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                shadowColor: "#000",
+                shadowOffset: { height: 2, width: 0 },
+                borderRadius: 8,
+              }}
+            >
+              <TouchableOpacity
+                onPress={handleLeftHandPress}
+                style={[
+                  styles.selectAllButton,
+                  { borderRadius: 8 },
+                  isLeftHandSelected && styles.selectedButton,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.selectAllText,
+                    isLeftHandSelected && { color: "#FFFFFF" },
+                  ]}
+                >
+                  Left hand
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleRightHandPress}
+                style={[
+                  styles.selectAllButton,
+                  { borderRadius: 8 },
+                  isRightHandSelected && styles.selectedButton,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.selectAllText,
+                    isRightHandSelected && { color: "#FFFFFF" },
+                  ]}
+                >
+                  Right hand
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
         <View style={styles.headerContainer}>
           <Text style={styles.promptText}>
             Tap on cards to select Car Angles
@@ -175,16 +332,18 @@ const SelectImageAngles = ({ navigation, route }) => {
             onPress={
               isExteriorSelected ? handleSelectAll : handleSelectInteriorAll
             }
-            style={styles.selectAllButton}
+            style={{ ...styles.selectAllButton, backgroundColor: "#2499DA" }}
           >
-            <Text style={styles.selectAllText}>Select all</Text>
+            <Text style={{ ...styles.selectAllText, color: "#FFF" }}>
+              Select all
+            </Text>
           </TouchableOpacity>
         </View>
 
         <FlatList
           data={isExteriorSelected ? carAngles : interiorAngles}
           renderItem={isExteriorSelected ? renderCarItem : renderInteriorItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id.toString()}
           numColumns={2}
           extraData={
             isExteriorSelected ? selectedAngles : selectedInteriorAngles
@@ -194,16 +353,12 @@ const SelectImageAngles = ({ navigation, route }) => {
 
         <View style={styles.subContainer}>
           <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("CameraScreen", {
-                selectedAngles: selectedAngles,
-                selectedInteriorAngles: selectedInteriorAngles,
-                batchId: batchId,
-                selectedTemplateId: selectedTemplateId,
-                screenId: route?.params?.screenId,
-              })
-            }
-            style={styles.nextButton}
+            disabled={!isButtonDisabled}
+            onPress={onClickNext}
+            style={{
+              ...styles.nextButton,
+              opacity: !isButtonDisabled ? 0.5 : 1,
+            }}
           >
             <Text style={styles.nextButtonText}>NEXT</Text>
           </TouchableOpacity>
@@ -214,11 +369,16 @@ const SelectImageAngles = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+    padding: Platform.OS === "android" ? 10 : 20,
+  },
   container: {
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF",
-    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   backButton: {
     flexDirection: "row",
@@ -299,18 +459,15 @@ const styles = StyleSheet.create({
     color: "#58595B",
   },
   selectAllButton: {
-    backgroundColor: "#2499DA",
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 5,
-    elevation: 2,
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowColor: "#000",
-    shadowOffset: { height: 2, width: 0 },
+  },
+  selectedButton: {
+    backgroundColor: "#2499DA",
   },
   selectAllText: {
-    color: "#FFFFFF", // White text for the button
+    color: "#898989", // White text for the button
     fontWeight: "600",
     textAlign: "center",
     fontSize: moderateScale(10),
@@ -340,7 +497,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   angleButton: {
-    borderWidth: 1,
+    // borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 10,
     padding: 10,
@@ -353,7 +510,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
     backgroundColor: "#fff",
   },
   angleInvisibleButton: {

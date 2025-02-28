@@ -1,4 +1,5 @@
 export { default as SignIn } from "./SignIn/index";
+export { default as SignUp } from "./SignUp/index";
 export { default as ForgotPassword } from "./ForgotPassword/index";
 export { default as TermsPolicy } from "./TermsPolicy/index";
 export { default as Home } from "./Home/index";
@@ -17,3 +18,5 @@ export { default as History } from "./History/index";
 export { default as Camera } from "./Camera/index";
 export { default as Splash } from "./Splash/index";
 export { default as CheckImages } from "./CheckImages/index";
+export { default as MainSplash } from "./MainSplash/index";
+export { default as PricingScreen } from "./Pricing/index";

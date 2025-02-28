@@ -8,9 +8,10 @@ import {
   SafeAreaView,
   Platform,
   Linking,
+  StatusBar,
 } from "react-native";
 import { profileImg } from "../../assets/images";
-import { LockIcon, RightArrow } from "../../assets/icons";
+import { LeftArrow, LockIcon, RightArrow } from "../../assets/icons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAppState } from "../../context/AppStateContext";
@@ -18,7 +19,7 @@ import { APIURLS } from "../../utils/ApiUrl";
 import api from "../../utils/Api";
 import { moderateScale } from "../../utils/Scaling";
 
-const Profile = () => {
+const Profile = ({ route }) => {
   const navigation = useNavigation();
   const { state, dispatch } = useAppState();
   const [userData, setUserData] = useState(null);
@@ -46,25 +47,64 @@ const Profile = () => {
       // Update context or global state to reflect logout
       dispatch({ type: "MAIN_CONTENT", payload: "HomeScreen" });
       dispatch({ type: "TOKEN", payload: "" });
+      await AsyncStorage.setItem("isFirstInstall", "true");
     } catch (error) {
       console.error("Logout failed", error);
       // Handle any errors here
     }
   };
+
+  const navigateWebView = (text) => {
+    text === "Credit Balance"
+      ? navigation.navigate("BillingScreen", { userData: userData })
+      : text === "Manage Password"
+      ? navigation.navigate("ManagePasswordScreen", {
+          userId: userData?.userDetails?.id,
+        })
+      : navigation.navigate("PricingScreen");
+    // navigation.navigate("WebViewScreen", {
+    //     link: "https://autobg.ai/how_it_works.php",
+    //   });
+  };
+
+  const renderListItem = (text) => (
+    <TouchableOpacity
+      onPress={() => navigateWebView(text)}
+      style={styles.listItem}
+    >
+      <Text style={styles.listText}>{text}</Text>
+      <RightArrow />
+    </TouchableOpacity>
+  );
+
+  const renderHorizontalLine = () => <View style={styles.horizontalLine} />;
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
       <View style={styles.container}>
+        {route?.params?.isBackPresent && (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.iconStyle}
+          >
+            <LeftArrow />
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.shadowContainer}>
           <View style={styles.profilecontainer}>
             <Image source={profileImg} style={styles.profileImage} />
             <View>
-              <Text style={styles.profileName}>
+              <Text
+                style={styles.profileName}
+                // numberOfLines={1}
+                // ellipsizeMode="tail"
+              >
                 {userData?.userDetails?.userName}
               </Text>
               <Text style={styles.email}>{userData?.userDetails?.email}</Text>
             </View>
           </View>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={() =>
               navigation.navigate("ManagePasswordScreen", {
                 userId: userData?.userDetails?.id,
@@ -74,16 +114,18 @@ const Profile = () => {
           >
             <LockIcon />
             <Text style={styles.mngText}>Manage password</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {/* List */}
         <View style={styles.listContainer}>
+          {renderListItem("Manage Password")}
+          {renderHorizontalLine()}
+          {renderListItem("Credit Balance")}
+          {renderHorizontalLine()}
           {renderListItem("Manage Plans")}
           {renderHorizontalLine()}
-          {renderListItem("Billing")}
-          {renderHorizontalLine()}
-          {renderListItem("How to use ?")}
+          {/* {renderListItem("How to use ?")} */}
           {renderHorizontalLine()}
         </View>
 
@@ -99,37 +141,36 @@ const Profile = () => {
             <Text style={styles.buttonText}>Delete Account</Text>
           </TouchableOpacity>
         </View>
+        {/* <Text
+          style={{ color: "#000", textAlign: "center", marginVertical: 20 }}
+        >
+          1.0.0(5)
+        </Text> */}
       </View>
     </SafeAreaView>
   );
 };
 
-const renderListItem = (text) => (
-  <TouchableOpacity
-    onPress={() => {
-      Linking.openURL(
-        text === "Manage Plans"
-          ? "https://autobg.ai/pricing.php"
-          : text === "Billing"
-          ? "https://autobg.ai/user_profile.php"
-          : "https://autobg.ai/how_it_works.php"
-      );
-    }}
-    style={styles.listItem}
-  >
-    <Text style={styles.listText}>{text}</Text>
-    <RightArrow />
-  </TouchableOpacity>
-);
-
-const renderHorizontalLine = () => <View style={styles.horizontalLine} />;
-
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+    padding: Platform.OS === "android" ? 10 : 20,
+  },
   container: {
     flex: 1,
     backgroundColor: "#EAF7FF",
     padding: Platform.OS === "android" ? 10 : 20,
-    paddingTop: Platform.OS === "android" ? 15 : 0,
+  },
+  iconStyle: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingBottom: 20,
+  },
+  backText: {
+    color: "#004E8E",
+    marginLeft: 10,
   },
   shadowContainer: {
     backgroundColor: "white",
@@ -146,8 +187,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+    width: "100%",
   },
-  profilecontainer: { flexDirection: "row", alignItems: "center" },
+  profilecontainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "80%",
+  },
   profileImage: {
     width: 40,
     height: 40,
@@ -157,7 +203,7 @@ const styles = StyleSheet.create({
   mngPassword: {
     backgroundColor: "#2499DA",
     borderRadius: 30,
-    padding: 5,
+    padding: 10,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 10,

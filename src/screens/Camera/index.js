@@ -1,70 +1,88 @@
+import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
+  Image,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import React, { useEffect, useRef, useState } from "react";
-import * as ScreenOrientation from "expo-screen-orientation";
+import { ActivityIndicator, MD2Colors } from "react-native-paper";
+import Icon from "react-native-vector-icons/Entypo";
+import Orientation from "react-native-orientation-locker";
 import ImagePicker from "react-native-image-crop-picker";
 import ImageResizer from "@bam.tech/react-native-image-resizer";
 import {
-  AcMedia,
-  BackAngle,
-  BootSpace,
+  BackLeftSideView,
+  BackRightSideView,
+  BackView,
   CameraIcon,
-  CenterDashboard,
-  DoorView,
-  FrontAngle,
-  LeftAngle,
-  LeftSideAngle,
-  Meter,
-  RightAngle,
-  RightSideAngle,
+  FrontLeftSideView,
+  FrontRightSideView,
+  FrontView,
+  LeftSideView,
+  RightSideView,
   SkipIcon,
-  SpeedoMeter,
-  Steering,
 } from "../../assets/icons";
 import MLCamera from "../../components/MLCamera";
 import {
-  AcMediaInterior,
   BackSide,
-  BootSpaceInterior,
-  CenterDashboardInterior,
-  DoorViewInterior,
   FrontBack,
   Leveler,
   RearSide,
   SideAngle,
-  SteeringMeter,
 } from "../../components";
 import { APIURLS } from "../../utils/ApiUrl";
 import api from "../../utils/Api";
 import { useAppState } from "../../context/AppStateContext";
 import { moderateScale } from "../../utils/Scaling";
-
-const { width, height } = Dimensions.get("window");
+import {
+  backCar,
+  backLeftAngleCar,
+  backRightAngleCar,
+  frontCar,
+  leftAngleCar,
+  leftSideCar,
+  rightAngleCar,
+  rightSideCar,
+} from "../../assets/images";
+import {
+  CarAcConsole,
+  CarTrunk,
+  CarWheel,
+  DriverSideView,
+  MidConsoleView,
+  MidConsoleViewRight,
+  PassengerBackViewLeft,
+  PassengerBackViewRight,
+  PassengerSideView,
+} from "../../assets/icons/interiorAngles";
+import { useIsFocused } from "@react-navigation/native";
 
 const Camera = ({ route, navigation }) => {
   const { state, dispatch } = useAppState();
+  const isFocused = useIsFocused();
   const selectedAngleIndex = route?.params?.selectedAngles;
   const selectedInteriorAngleIndex = route?.params?.selectedInteriorAngles;
   const batchId = route?.params?.batchId;
   const selectedTemplateId = route?.params?.selectedTemplateId;
+  const isLeftHandSelected = route?.params?.isLeftHandSelected;
   const [cameraCarAngles, setCameraCarAngles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isAllColorsSet, setAllColorsSet] = useState(false);
   const [selectedAngleName, setSelectedAngleName] = useState("");
+  const [exteriorHeight, setExteriorHeight] = useState(0);
   const [isCentered, setIsCentered] = useState(false);
+  const [isSideBarOpen, setIsSideBarOpen] = useState(false);
+  const [width, setWidth] = useState(Dimensions.get("screen").width);
 
   const [carAngles, setCarAngles] = useState([
     {
       id: 1,
-      icon: <FrontAngle width={30} />,
+      icon: frontCar,
       name: "Front View",
       color: "",
       uri: "",
@@ -72,40 +90,56 @@ const Camera = ({ route, navigation }) => {
     },
     {
       id: 2,
-      icon: <BackAngle width={30} />,
-      name: "Back View",
+      icon: rightAngleCar,
+      name: "3/4th Front Right View",
       color: "",
       uri: "",
       path: "",
     },
     {
       id: 3,
-      icon: <LeftSideAngle width={30} />,
-      name: "Left View",
-      color: "",
-      uri: "",
-      path: "",
-    },
-    {
-      id: 4,
-      icon: <RightSideAngle width={30} />,
+      icon: rightSideCar,
       name: "Right View",
       color: "",
       uri: "",
       path: "",
     },
     {
+      id: 4,
+      icon: backRightAngleCar,
+      name: "3/4th Rear Right View",
+      color: "",
+      uri: "",
+      path: "",
+    },
+    {
       id: 5,
-      icon: <LeftAngle width={30} />,
-      name: "3/4th Rear View",
+      icon: backCar,
+      name: "Back View",
       color: "",
       uri: "",
       path: "",
     },
     {
       id: 6,
-      icon: <RightAngle width={30} />,
-      name: "3/4th Front View",
+      icon: backLeftAngleCar,
+      name: "3/4th Rear Left View",
+      color: "",
+      uri: "",
+      path: "",
+    },
+    {
+      id: 7,
+      icon: leftSideCar,
+      name: "Left View",
+      color: "",
+      uri: "",
+      path: "",
+    },
+    {
+      id: 8,
+      icon: leftAngleCar,
+      name: "3/4th Front Left View",
       color: "",
       uri: "",
       path: "",
@@ -115,61 +149,114 @@ const Camera = ({ route, navigation }) => {
   const interiorAngles = [
     {
       id: 1,
-      icon: <BootSpace width={30} />,
-      name: "Boot Space",
+      icon: <CarWheel width={30} />,
+      name: "Car Wheel",
       color: "",
       uri: "",
       path: "",
     },
     {
       id: 2,
-      icon: <CenterDashboard width={30} />,
-      name: "Center Dashboard",
+      icon: <CarTrunk width={30} />,
+      name: "Car Trunk",
       color: "",
       uri: "",
       path: "",
     },
     {
       id: 3,
-      icon: <AcMedia width={30} />,
-      name: "Ac Media",
+      icon: isLeftHandSelected ? (
+        <PassengerBackViewLeft width={30} />
+      ) : (
+        <PassengerBackViewRight width={30} />
+      ),
+      name: isLeftHandSelected
+        ? "Passenger Back View Left"
+        : "Passenger Back View Right",
       color: "",
       uri: "",
       path: "",
     },
     {
       id: 4,
-      icon: <SpeedoMeter width={30} />,
-      name: "Speedo Meter",
+      icon: isLeftHandSelected ? (
+        <PassengerBackViewRight width={30} />
+      ) : (
+        <PassengerBackViewLeft width={30} />
+      ),
+      name: isLeftHandSelected
+        ? "Passenger Back View Right"
+        : "Passenger Back View Left",
       color: "",
       uri: "",
       path: "",
     },
     {
       id: 5,
-      icon: <DoorView width={30} />,
-      name: "Door View",
+      icon: isLeftHandSelected ? (
+        <MidConsoleView width={30} />
+      ) : (
+        <MidConsoleViewRight width={30} />
+      ),
+      name: "Mid Console View",
       color: "",
       uri: "",
       path: "",
     },
     {
       id: 6,
-      icon: <Meter width={30} />,
-      name: "Meter",
+      icon: <CarAcConsole width={30} />,
+      name: "Ac Console",
       color: "",
       uri: "",
       path: "",
     },
     {
       id: 7,
-      icon: <Steering width={30} />,
-      name: "Steering",
+      icon: <DriverSideView width={30} />,
+      name: "Driver Side View",
+      color: "",
+      uri: "",
+      path: "",
+    },
+    {
+      id: 8,
+      icon: <PassengerSideView width={30} />,
+      name: "Passenger Side View",
       color: "",
       uri: "",
       path: "",
     },
   ];
+
+  const [layout, setLayout] = useState({ width: 0, height: 0 });
+  const [layoutReady, setLayoutReady] = useState(false);
+
+  useEffect(() => {
+    // Function to update the screen width
+    const updateDimensions = () => {
+      const { width } = Dimensions.get("screen");
+      setWidth(width);
+    };
+
+    // Set the initial width
+    updateDimensions();
+
+    // Add event listener to update width on dimension change
+    Dimensions.addEventListener("change", updateDimensions);
+
+    // Cleanup event listener on component unmount
+    return () => {
+      // Dimensions.removeEventListener("change", updateDimensions);
+      null;
+    };
+  }, []);
+
+  const onLayout = (event) => {
+    const { width, height } = event.nativeEvent.layout;
+    setLayout({ width, height });
+    setLayoutReady(true);
+  };
 
   const mergeCameraAngle = () => {
     let mergedSelections = [];
@@ -193,6 +280,7 @@ const Camera = ({ route, navigation }) => {
       ...item,
       newId: index + 1, // Assigning new sequential IDs starting from 1
     }));
+    setSelectedAngleName(cameraAngles?.[0]?.name);
     setCameraCarAngles(cameraAngles);
   };
 
@@ -203,19 +291,21 @@ const Camera = ({ route, navigation }) => {
   const cameraRef = useRef(null);
 
   useEffect(() => {
+    // Lock orientation to landscape when screen is focused
     const unsubscribeFocus = navigation.addListener("focus", () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      Orientation.lockToLandscape();
     });
 
+    // Unlock or keep landscape when screen is blurred
     const unsubscribeBlur = navigation.addListener("blur", () => {
-      ScreenOrientation.unlockAsync();
+      Orientation.unlockAllOrientations(); // Adjust if you want a default portrait when leaving
     });
 
     return () => {
       unsubscribeFocus();
       unsubscribeBlur();
     };
-  }, [navigation]);
+  }, [navigation, isFocused]);
 
   const takePicture = async () => {
     if (cameraRef.current) {
@@ -228,14 +318,12 @@ const Camera = ({ route, navigation }) => {
           photo.height,
           "JPEG",
           100,
-          Platform.OS === "ios" ? 270 : 360,
+          Platform.OS === "ios" ? 360 : 360,
           null,
           true,
           { mode: "contain", onlyScaleDown: false },
           { width: photo.height, height: photo.width }
         );
-        console.log("photo", photo);
-        console.log("rotatedImage", rotatedImage);
 
         uploadImage(rotatedImage);
       } catch (error) {
@@ -288,6 +376,7 @@ const Camera = ({ route, navigation }) => {
           data?.uploadedUrl,
           item?.uri
         );
+        setLoading(false);
       } else {
         // Handle login failure here
         console.error("Upload Failed", data.status);
@@ -341,6 +430,14 @@ const Camera = ({ route, navigation }) => {
     setSelectedAngleName(cameraCarAngles[nextIndex].name);
   };
 
+  useEffect(() => {
+    setExteriorHeight(20);
+  }, []);
+
+  const allColorsSet = () => {
+    return cameraCarAngles.every((angle) => angle.color !== "");
+  };
+
   const renderItem = ({ item }) => {
     return (
       <TouchableOpacity
@@ -350,7 +447,15 @@ const Camera = ({ route, navigation }) => {
           item.name === selectedAngleName ? styles.selectedAngle : {},
         ]}
       >
-        {item?.icon}
+        {item?.arrayType === "exterior" ? (
+          <Image
+            style={{ width: 50, height: 50 }}
+            resizeMode="contain"
+            source={item.icon}
+          />
+        ) : (
+          item?.icon
+        )}
         <Text
           style={[
             styles.text,
@@ -358,9 +463,17 @@ const Camera = ({ route, navigation }) => {
           ]}
         >
           {item.name?.split(" ")[0]}{" "}
-          <Text style={styles.viewTxt}>{item.name?.split(" ")[1]}</Text>
+          <Text style={styles.viewTxt}>
+            {item.name?.split(" ")[1]} {"\n"}
+            {item.name?.split(" ")[3]}
+          </Text>
         </Text>
-        <View style={[styles.dot, { backgroundColor: item.color }]} />
+        <View
+          style={[
+            styles.dot,
+            { backgroundColor: item.color, borderRadius: 15 },
+          ]}
+        />
       </TouchableOpacity>
     );
   };
@@ -372,74 +485,464 @@ const Camera = ({ route, navigation }) => {
       selectedTemplateId: selectedTemplateId,
       uploadedUrl: cameraCarAngles,
       screenId: route?.params?.screenId,
+      isLeftHandSelected: isLeftHandSelected,
     });
+  };
+
+  const addedColorsCount = cameraCarAngles.filter(
+    (angle) => angle.color !== ""
+  ).length;
+
+  useEffect(() => {
+    if (cameraCarAngles.length > 0) {
+      const allColorsSet = cameraCarAngles.every((angle) => angle.color !== "");
+      if (allColorsSet) {
+        setAllColorsSet(true);
+        goToCheckImages();
+      }
+    }
+  }, [cameraCarAngles]);
+
+  const selectedInteriorAngles = () => {
+    if (
+      selectedAngleName === "Passenger Back View Right" ||
+      selectedAngleName === "Car Wheel" ||
+      selectedAngleName === "Ac Console" ||
+      selectedAngleName === "Car Trunk" ||
+      selectedAngleName === "Passenger Back View Left" ||
+      selectedAngleName === "Mid Console View" ||
+      selectedAngleName === "Passenger Side View" ||
+      selectedAngleName === "Driver Side View"
+    ) {
+      setIsCentered(true);
+    }
+  };
+
+  useEffect(() => {
+    selectedInteriorAngles();
+  }, [selectedAngleName]);
+
+  const openSideBar = () => {
+    setIsSideBarOpen(!isSideBarOpen);
   };
 
   return (
     <View style={styles.container}>
       {loading && (
         <View style={styles.loaderStyle}>
-          <ActivityIndicator size={"large"} color={"blue"} />
+          <ActivityIndicator
+            size={80}
+            color={MD2Colors.black}
+            animating={true}
+          />
         </View>
       )}
-      <View style={styles.container}>{/* <MLCamera ref={cameraRef} /> */}</View>
+      <View style={styles.container}>
+        <MLCamera ref={cameraRef} />
+      </View>
       <View style={styles.centerButtons}>
-        <TouchableOpacity onPress={() => goToCheckImages()}>
+        {/* <TouchableOpacity onPress={() => goToCheckImages()}>
           <View style={styles.galleryImg} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          disabled={!isCentered}
-          onPress={takePicture}
-          style={[styles.shutterButton, { opacity: !isCentered ? 0.5 : 1 }]}
-        >
-          <CameraIcon height={60} width={60} />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <View style={{ height: "20%" }} />
       </View>
       <View style={styles.sideBar}>
-        <FlatList
-          showsVerticalScrollIndicator={false}
-          data={cameraCarAngles}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.newId.toString()}
-        />
+        <TouchableOpacity
+          style={styles.sideBarContainer}
+          onPress={() => openSideBar()}
+        >
+          <View>
+            {isSideBarOpen ? (
+              <Icon name="eye" size={moderateScale(20)} color="#eee" />
+            ) : (
+              <Icon
+                name="eye-with-line"
+                size={moderateScale(20)}
+                color="#eee"
+              />
+            )}
+          </View>
+          <Text style={styles.showCarText}>
+            {isSideBarOpen ? "Show" : "Hide"} car angle list
+          </Text>
+        </TouchableOpacity>
+        <View style={styles.sideBarNum}>
+          <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "700" }}>
+            {addedColorsCount}/{cameraCarAngles?.length}
+          </Text>
+        </View>
+
+        {!isSideBarOpen && (
+          <View style={styles.sideBarCard}>
+            <FlatList
+              showsVerticalScrollIndicator={false}
+              data={cameraCarAngles}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.newId.toString()}
+            />
+          </View>
+        )}
       </View>
       <TouchableOpacity
-        onPress={skipAndSelectNextAngle}
+        onPress={() => navigation.goBack()}
+        style={{
+          position: "absolute",
+          right: "10%",
+          top: "10%",
+          zIndex: 2,
+        }}
+      >
+        <Icon name="circle-with-cross" size={moderateScale(30)} />
+      </TouchableOpacity>
+      <TouchableOpacity
+        disabled={!isCentered}
+        onPress={takePicture}
+        style={[styles.shutterButton, { opacity: !isCentered ? 0.5 : 1 }]}
+      >
+        <CameraIcon height={60} width={60} />
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={isAllColorsSet ? goToCheckImages : skipAndSelectNextAngle}
         style={styles.specialButton}
       >
         <SkipIcon />
-        <Text style={styles.specialButtonText}>Skip Image</Text>
+        <Text style={styles.specialButtonText}>
+          {!isAllColorsSet ? "Skip Image" : "Check Images"}
+        </Text>
       </TouchableOpacity>
-      <Leveler setIsCentered={setIsCentered} />
-      <View style={styles.stencilContainer}>
-        {selectedAngleName === "Front View" ||
-        selectedAngleName === "Back View" ? (
-          <FrontBack fill={isCentered ? "#17FF2D" : "#D2042D"} />
-        ) : selectedAngleName === "Left View" ||
-          selectedAngleName === "Right View" ? (
-          <SideAngle fill={isCentered ? "#17FF2D" : "#D2042D"} />
-        ) : selectedAngleName === "3/4th Rear View" ? (
-          <RearSide fill={isCentered ? "#17FF2D" : "#D2042D"} />
-        ) : selectedAngleName === "3/4th Front View" ? (
-          <BackSide fill={isCentered ? "#17FF2D" : "#D2042D"} />
-        ) : selectedAngleName === "Speedo Meter" ? (
-          <SteeringMeter />
-        ) : selectedAngleName === "Boot Space" ? (
-          <BootSpaceInterior />
-        ) : selectedAngleName === "Center Dashboard" ? (
-          <CenterDashboardInterior />
-        ) : selectedAngleName === "Ac Media" ? (
-          <AcMediaInterior />
-        ) : selectedAngleName === "Door View" ? (
-          <DoorViewInterior />
-        ) : selectedAngleName === "Meter" ? (
-          <Meter />
-        ) : selectedAngleName === "Steering" ? (
-          <Steering width={width} />
-        ) : null}
+      {selectedAngleName === "Passenger Back View Right" ||
+      selectedAngleName === "Car Wheel" ||
+      selectedAngleName === "Ac Console" ||
+      selectedAngleName === "Car Trunk" ||
+      selectedAngleName === "Passenger Back View Left" ||
+      selectedAngleName === "Mid Console View" ||
+      selectedAngleName === "Passenger Side View" ||
+      selectedAngleName === "Driver Side View" ? null : (
+        <Leveler setIsCentered={setIsCentered} />
+      )}
+      <View onLayout={onLayout} style={styles.stencilContainer}>
+        {layoutReady && (
+          <>
+            {selectedAngleName === "Front View" ||
+            selectedAngleName === "Back View" ? (
+              <FrontBack fill={isCentered ? "#17FF2D" : "#D2042D"} />
+            ) : selectedAngleName === "Left View" ||
+              selectedAngleName === "Right View" ? (
+              <SideAngle fill={isCentered ? "#17FF2D" : "#D2042D"} />
+            ) : selectedAngleName === "3/4th Front Left View" ||
+              selectedAngleName === "3/4th Rear Right View" ? (
+              <>
+                <RearSide fill={isCentered ? "#17FF2D" : "#D2042D"} />
+                {/* <View
+                  style={{
+                    position: "absolute",
+                    right: -40,
+                    top: 0,
+                    bottom: 0,
+                  }}
+                >
+                  <View
+                    style={{ flexDirection: "row", alignItems: "flex-end" }}
+                  >
+                    <View style={{ position: "relative" }}>
+                      <View
+                        style={{
+                          width: 0,
+                          height: 0,
+                          borderLeftWidth: 280,
+                          borderRightWidth: 0, // Match the width of the container
+                          borderBottomWidth: 170, // Adjust height to maintain the right-angle triangle
+                          borderTopWidth: 0,
+                          borderStyle: "solid",
+                          borderBottomColor: "#00BDFF80",
+                          borderRightColor: "transparent",
+                          borderLeftColor: "transparent",
+                        }}
+                      />
+                      <View
+                        style={{
+                          position: "absolute",
+                          left: 0,
+                          bottom: 0,
+                          width: Math.sqrt(Math.pow(280, 2) + Math.pow(170, 2)),
+                          height: "24.5%",
+                          borderStyle: "solid",
+                          borderTopWidth: 4,
+                          borderTopColor: isCentered ? "#17FF2D" : "#D2042D",
+                          transform: [{ rotate: "-31.3deg" }],
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "white",
+                            fontWeight: "bold",
+                            backgroundColor: isCentered ? "#17FF2D" : "#D2042D",
+                            padding: 2,
+                            borderRadius: 20,
+                            fontSize: 12,
+                            top: "-15%",
+                            width: 150,
+                            textAlign: "center",
+                          }}
+                        >
+                          Match the line with tire
+                        </Text>
+                      </View>
+                    </View>
+                    <View>
+                      <View
+                        style={{
+                          width: 150,
+                          height: "55%",
+                          backgroundColor: "#00BDFF80",
+                          borderLeftWidth: 4,
+                          borderLeftColor: isCentered ? "#17FF2D" : "#D2042D",
+                        }}
+                      />
+                      <View
+                        style={{
+                          width: 150,
+                          height: "45%",
+                          backgroundColor: "#00BDFF80",
+                        }}
+                      />
+                    </View>
+                  </View>
+                </View> */}
+              </>
+            ) : selectedAngleName === "3/4th Front Right View" ||
+              selectedAngleName === "3/4th Rear Left View" ? (
+              <View
+                style={{
+                  position: "absolute",
+                  left: Platform.OS === "ios" ? -10 : width > 1050 ? -40 : -25,
+                }}
+              >
+                <BackSide fill={isCentered ? "#17FF2D" : "#D2042D"} />
+              </View>
+            ) : // <View
+            //   style={{
+            //     position: "absolute",
+            //     left: -40, // Changed to left
+            //     top: 0,
+            //     bottom: 0,
+            //   }}
+            // >
+            //   <View
+            //     style={{
+            //       flexDirection: "row-reverse",
+            //       alignItems: "flex-end",
+            //     }}
+            //   >
+            //     <View style={{ position: "relative" }}>
+            //       <View
+            //         style={{
+            //           width: 0,
+            //           height: 0,
+            //           borderRightWidth: 280, // Changed to borderRightWidth
+            //           borderLeftWidth: 0,
+            //           borderBottomWidth: 170,
+            //           borderTopWidth: 0,
+            //           borderStyle: "solid",
+            //           borderBottomColor: "#00BDFF80",
+            //           borderLeftColor: "transparent",
+            //           borderRightColor: "transparent",
+            //         }}
+            //       />
+            //       <View
+            //         style={{
+            //           position: "absolute",
+            //           right: 0, // Changed to right
+            //           bottom: 0,
+            //           width: Math.sqrt(Math.pow(280, 2) + Math.pow(170, 2)),
+            //           height: "24.5%",
+            //           borderStyle: "solid",
+            //           borderTopWidth: 4,
+            //           borderTopColor: isCentered ? "#17FF2D" : "#D2042D",
+            //           transform: [{ rotate: "31.3deg" }],
+            //           alignItems: "center",
+            //         }}
+            //       >
+            //         <Text
+            //           style={{
+            //             color: "white",
+            //             fontWeight: "bold",
+            //             backgroundColor: isCentered ? "#17FF2D" : "#D2042D",
+            //             padding: 2,
+            //             borderRadius: 20,
+            //             fontSize: 12,
+            //             top: "-15%",
+            //             width: 150,
+            //             textAlign: "center",
+            //           }}
+            //         >
+            //           Match the line with tire
+            //         </Text>
+            //       </View>
+            //     </View>
+            //     <View>
+            //       <View
+            //         style={{
+            //           width: 150,
+            //           height: "55%",
+            //           backgroundColor: "#00BDFF80",
+            //           borderRightWidth: 4, // Changed to borderRightWidth
+            //           borderRightColor: isCentered ? "#17FF2D" : "#D2042D", // Changed to borderRightColor
+            //         }}
+            //       />
+            //       <View
+            //         style={{
+            //           width: 150,
+            //           height: "45%",
+            //           backgroundColor: "#00BDFF80",
+            //         }}
+            //       />
+            //     </View>
+            //   </View>
+            // </View>
+            selectedAngleName === "Car Wheel" ? (
+              <CarWheel width={layout.width} height={layout.height} />
+            ) : selectedAngleName === "Ac Console" ? (
+              <CarAcConsole width={layout.width} height={layout.height} />
+            ) : selectedAngleName === "Car Trunk" ? (
+              <CarTrunk width={layout.width} height={layout.height} />
+            ) : selectedAngleName === "Passenger Back View Left" ? (
+              <PassengerBackViewLeft
+                width={layout.width}
+                height={layout.height}
+              />
+            ) : selectedAngleName === "Passenger Back View Right" ? (
+              <PassengerBackViewRight
+                width={layout.width}
+                height={layout.height}
+              />
+            ) : selectedAngleName === "Mid Console View" ? (
+              isLeftHandSelected ? (
+                <MidConsoleView width={layout.width} height={layout.height} />
+              ) : (
+                <MidConsoleViewRight
+                  width={layout.width}
+                  height={layout.height}
+                />
+              )
+            ) : selectedAngleName === "Passenger Side View" ? (
+              <PassengerSideView width={layout.width} height={layout.height} />
+            ) : selectedAngleName === "Driver Side View" ? (
+              <DriverSideView width={layout.width} height={layout.height} />
+            ) : null}
+          </>
+        )}
+      </View>
+      <View
+        style={{
+          ...styles.stencilContainer,
+          top: 0,
+        }}
+        onLayout={onLayout}
+      >
+        {layoutReady && (
+          <>
+            {selectedAngleName === "Back View" ? (
+              <View style={{ marginTop: width < 740 ? 60 : 20 }}>
+                <BackView width={layout.width} height={layout.height - 50} />
+              </View>
+            ) : selectedAngleName === "Front View" ? (
+              <View style={{ marginTop: width < 740 ? 60 : 20 }}>
+                <FrontView width={layout.width} height={layout.height - 50} />
+              </View>
+            ) : selectedAngleName === "Left View" ? (
+              <View
+                style={{
+                  marginLeft: 50,
+                  marginTop:
+                    Platform.OS === "ios"
+                      ? width > 850
+                        ? 10
+                        : 10
+                      : width > 930
+                      ? 10
+                      : width < 740
+                      ? 30
+                      : 20,
+                  transform: [{ rotate: "1deg" }],
+                }}
+              >
+                <LeftSideView
+                  width={layout.width - 120}
+                  height={layout.height}
+                />
+              </View>
+            ) : selectedAngleName === "Right View" ? (
+              <View
+                style={{
+                  marginLeft: 50,
+                  marginTop:
+                    Platform.OS === "ios"
+                      ? width > 850
+                        ? 10
+                        : 10
+                      : width > 930
+                      ? 10
+                      : width < 740
+                      ? 30
+                      : 20,
+                  transform: [{ rotate: "-1.5deg" }],
+                }}
+              >
+                <RightSideView
+                  width={layout.width - 120}
+                  height={layout.height}
+                />
+              </View>
+            ) : selectedAngleName === "3/4th Front Left View" ? (
+              <View
+                style={{
+                  marginTop: 5,
+                }}
+              >
+                <FrontLeftSideView
+                  width={layout.width}
+                  height={layout.height - 65}
+                />
+              </View>
+            ) : selectedAngleName === "3/4th Front Right View" ? (
+              <View
+                style={{
+                  marginLeft:
+                    width < 740 ? 40 : width > 865 ? 10 : width > 860 ? 10 : 0,
+                  marginTop: 5,
+                }}
+              >
+                <FrontRightSideView
+                  width={layout.width}
+                  height={layout.height - 65}
+                />
+              </View>
+            ) : selectedAngleName === "3/4th Rear Left View" ? (
+              <View
+                style={{
+                  marginLeft:
+                    width < 740 ? 40 : width > 865 ? 10 : width > 860 ? 10 : 0,
+                  marginTop: 5,
+                }}
+              >
+                <BackRightSideView
+                  width={layout.width}
+                  height={layout.height - 65}
+                />
+              </View>
+            ) : selectedAngleName === "3/4th Rear Right View" ? (
+              <View style={{ marginTop: 5 }}>
+                <BackLeftSideView
+                  width={layout.width}
+                  height={layout.height - 65}
+                />
+              </View>
+            ) : null}
+          </>
+        )}
       </View>
     </View>
   );
@@ -458,16 +961,47 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    zIndex: 1,
+    zIndex: 2,
   },
   sideBar: {
     paddingVertical: 30,
-    justifyContent: "space-between",
     position: "absolute",
     left: Platform.OS === "android" ? 0 : 50,
     zIndex: 2,
     top: 0,
     bottom: 0,
+  },
+  sideBarContainer: {
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    borderRadius: 100,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 13,
+    paddingVertical: 5,
+    marginBottom: 10,
+  },
+  showCarText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    paddingLeft: 10,
+  },
+  sideBarNum: {
+    position: "absolute",
+    top: "12%",
+    left: "110%",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  sideBarCard: {
+    borderWidth: 0.5,
+    borderColor: "#EFEFEF",
+    borderRadius: 12,
+    padding: 6,
+    marginBottom: 50,
+    backgroundColor: "#EFEFEF30",
   },
   itemContainer: {
     alignItems: "center",
@@ -476,8 +1010,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     justifyContent: "space-between",
     backgroundColor: "#FFF",
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
+    borderRadius: 10,
     height: 55,
   },
   selectedAngle: {
@@ -507,7 +1040,7 @@ const styles = StyleSheet.create({
   dot: {
     width: 8,
     height: 8,
-    borderRadius: 5,
+    borderRadius: 15,
   },
   centerButtons: {
     transform: [{ translateX: -50 }],
@@ -540,7 +1073,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: moderateScale(10),
   },
-  shutterButton: {},
+  shutterButton: {
+    position: "absolute",
+    right: "10%",
+    top: "45%",
+    zIndex: 2,
+  },
   galleryImg: {
     height: 80,
     width: 130,
@@ -557,6 +1095,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    top: 0,
     zIndex: 1,
   },
 });

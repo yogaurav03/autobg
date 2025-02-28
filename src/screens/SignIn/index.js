@@ -8,7 +8,12 @@ import {
   Image,
   Alert,
   Dimensions,
+  Linking,
+  Platform,
+  ScrollView,
+  KeyboardAvoidingView,
 } from "react-native";
+import Icon from "react-native-vector-icons/Entypo";
 import { mainBg } from "../../assets/images";
 import api from "../../utils/Api";
 import { APIURLS } from "../../utils/ApiUrl";
@@ -21,6 +26,7 @@ const SignInScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const handleSignIn = async () => {
     setLoading(true);
@@ -47,65 +53,106 @@ const SignInScreen = ({ navigation }) => {
     }
   };
   return (
-    <View style={styles.container}>
-      <View style={{ flex: 0.4 }}>
-        <Image style={{ width: width }} source={mainBg} />
-      </View>
-      <View style={styles.containerBox}>
-        <Text style={styles.welcomeText}>Welcome Back!</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : null}
+    >
+      <View style={styles.container}>
+        <View style={{ flex: 0.4 }}>
+          <Image style={{ width: width }} source={mainBg} />
+        </View>
+        <View style={styles.containerBox}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={styles.welcomeText}>Welcome Back!</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="grey"
-          onChangeText={setEmail}
-        />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="grey"
+              onChangeText={setEmail}
+            />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Password"
-          placeholderTextColor="grey"
-          secureTextEntry={true}
-          onChangeText={setPassword}
-        />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter Password"
+                placeholderTextColor="grey"
+                secureTextEntry={!isPasswordVisible}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+              >
+                <View style={styles.togglePasswordText}>
+                  {isPasswordVisible ? (
+                    <Icon name="eye" size={moderateScale(24)} color="#ACACAC" />
+                  ) : (
+                    <Icon
+                      name="eye-with-line"
+                      size={moderateScale(24)}
+                      color="#ACACAC"
+                    />
+                  )}
+                </View>
+              </TouchableOpacity>
+            </View>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate("ForgotPasswordScreen")}
-        >
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ForgotPasswordScreen")}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          disabled={loading}
-          onPress={() => handleSignIn()}
-          style={styles.signInButton}
-        >
-          <Text style={styles.signInButtonText}>
-            {loading ? "Signing In..." : "Sign In"}
-          </Text>
-        </TouchableOpacity>
-        <View style={styles.termsView}>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("TermsPolicyScreen", {
-                screenName: "Terms",
-              })
-            }
-          >
-            <Text style={styles.termsText}>Terms and condition </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("TermsPolicyScreen", {
-                screenName: "Privacy",
-              })
-            }
-          >
-            <Text style={styles.termsText}>Privacy policy </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              disabled={loading}
+              onPress={() => handleSignIn()}
+              style={styles.signInButton}
+            >
+              <Text style={styles.signInButtonText}>
+                {loading ? "Signing In..." : "Sign In"}
+              </Text>
+            </TouchableOpacity>
+
+            <Text
+              style={{
+                textAlign: "center",
+                fontSize: moderateScale(12),
+                marginBottom: 20,
+              }}
+            >
+              Don't have an account ?{" "}
+              <Text
+                onPress={() => navigation.navigate("SignUpScreen")}
+                style={{ color: "#32A1FC" }}
+              >
+                Sign up now
+              </Text>
+            </Text>
+
+            <View style={styles.termsView}>
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate("TermsPolicyScreen", {
+                    screenName: "Terms",
+                  })
+                }
+              >
+                <Text style={styles.termsText}>Terms and condition </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate("TermsPolicyScreen", {
+                    screenName: "Privacy",
+                  })
+                }
+              >
+                <Text style={styles.termsText}>Privacy policy </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -115,7 +162,8 @@ const styles = StyleSheet.create({
   },
   containerBox: {
     flex: 0.6,
-    padding: 40,
+    paddingHorizontal: 40,
+    paddingTop: 40,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     backgroundColor: "#EFF9FF",
@@ -154,6 +202,25 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     paddingHorizontal: 10,
   },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+    borderRadius: 8,
+    backgroundColor: "white",
+    shadowColor: "black",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  passwordInput: {
+    flex: 1,
+    height: 58,
+    paddingHorizontal: 10,
+  },
+  togglePasswordText: {
+    paddingHorizontal: 15,
+  },
   forgotPasswordText: {
     color: "#32A1FC",
     textAlign: "right",
@@ -165,7 +232,8 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     paddingVertical: 20,
     alignItems: "center",
-    marginVertical: 30,
+    marginTop: 30,
+    marginBottom: 10,
   },
   signInButtonText: {
     color: "white",
@@ -179,6 +247,7 @@ const styles = StyleSheet.create({
   },
   termsView: {
     alignSelf: "center",
+    marginBottom: 20,
   },
 });
 

@@ -8,19 +8,21 @@ import {
   Platform,
   FlatList,
   Alert,
+  StatusBar,
+  TouchableOpacity,
 } from "react-native";
+import LottieView from "lottie-react-native";
 import { LeftArrow } from "../../assets/icons";
-import { TouchableOpacity } from "react-native-gesture-handler";
-import * as ScreenOrientation from "expo-screen-orientation";
-import * as FileSystem from "expo-file-system";
-import * as Permissions from "expo-permissions";
-import * as MediaLibrary from "expo-media-library";
+import Orientation from "react-native-orientation-locker";
+import { CameraRoll } from "@react-native-camera-roll/camera-roll";
+import RNFS from "react-native-fs";
 import moment from "moment";
 import api from "../../utils/Api";
 import { APIURLS } from "../../utils/ApiUrl";
 import { useAppState } from "../../context/AppStateContext";
 import { moderateScale } from "../../utils/Scaling";
 import { failedImg } from "../../assets/images";
+import { errorIcon } from "../../assets/lottie";
 
 const ProcessTray = ({ navigation, route }) => {
   const historyData = route.params?.historyData;
@@ -33,6 +35,33 @@ const ProcessTray = ({ navigation, route }) => {
   const collectionUpdatedAt = new Date(
     historyData?.collectionData?.collectionUpdatedAt
   );
+  const deliveredTime = collectionUpdatedAt - collectionCreatedAt;
+
+  const totalSeconds = Math.floor(deliveredTime / 1000);
+  const deliveredTimehours = Math.floor(totalSeconds / 3600);
+  const deliveredTimeminutes = Math.floor((totalSeconds % 3600) / 60);
+  const deliveredTimeseconds = totalSeconds % 60;
+
+  let formattedTimeDifference = "";
+
+  if (deliveredTimehours > 0) {
+    formattedTimeDifference += `${deliveredTimehours} hour${
+      deliveredTimehours > 1 ? "s" : ""
+    } `;
+  }
+
+  if (deliveredTimeminutes > 0) {
+    formattedTimeDifference += `${deliveredTimeminutes} min${
+      deliveredTimeminutes > 1 ? "s" : ""
+    } `;
+  }
+
+  if (deliveredTimeseconds > 0) {
+    formattedTimeDifference += `${deliveredTimeseconds} sec${
+      deliveredTimeseconds > 1 ? "s" : ""
+    }`;
+  }
+
   const date = collectionCreatedAt.toISOString().split("T")[0];
   const time = collectionCreatedAt.toTimeString().split(" ")[0];
   const collectionUpdatedTime = collectionUpdatedAt
@@ -62,29 +91,52 @@ const ProcessTray = ({ navigation, route }) => {
     getImages();
   }, []);
 
-  const renderImages = ({ item }) => (
-    <Image source={{ uri: item?.data?.doneImgUrl }} style={styles.imageStyle} />
-  );
-
   useEffect(() => {
-    const lockOrientation = async () => {
-      // Lock the orientation to potrait
-      await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.PORTRAIT
-      );
-    };
+    const unsubscribeFocus = navigation.addListener("focus", () => {
+      // Optionally introduce a delay if needed
+      setTimeout(() => {
+        Orientation.lockToPortrait();
+      }, 100); // Delay for 100 milliseconds, adjust as necessary
+    });
 
-    lockOrientation();
+    const unsubscribeBlur = navigation.addListener("blur", () => {
+      Orientation.unlockAllOrientations();
+    });
 
-    // Clean up the orientation lock on component unmount
     return () => {
-      const unlockOrientation = async () => {
-        await ScreenOrientation.unlockAsync(); // This will unlock the orientation
-      };
-
-      unlockOrientation();
+      unsubscribeFocus();
+      unsubscribeBlur();
     };
-  }, []);
+  }, [navigation]);
+
+  const downloadImageHit = async () => {
+    if (state.token) {
+      const response = await api.post(
+        APIURLS.downloadImage(historyData?.collectionData?.collectionId),
+        state.token
+      );
+      if (response?.code === 1) {
+      }
+    }
+  };
+
+  const renderImages = ({ item }) => (
+    <TouchableOpacity
+      style={{ ...styles.imageStyle, width: "49%" }}
+      key={item?.data?.id}
+      onPress={() =>
+        navigation.navigate("PreviewScreen", {
+          imageData: item?.data?.doneImgUrl,
+          currentIndex: 0,
+        })
+      }
+    >
+      <Image
+        source={{ uri: item?.data?.doneImgUrl }}
+        style={styles.imageStyle}
+      />
+    </TouchableOpacity>
+  );
 
   const imageUrl = {
     uri: "https://media.voguebusiness.com/photos/5ef6493adf1073db3375835d/master/pass/kanye-west-gap-news-voguebus-mert-alas-and-marcus-piggott-june-20-story.jpg",
@@ -92,37 +144,29 @@ const ProcessTray = ({ navigation, route }) => {
 
   const handleDownload = async () => {
     let date = moment().format("YYYYMMDDhhmmss");
-    let fileUri = FileSystem.documentDirectory + `${date}.jpg`;
+    let fileUri = RNFS.DocumentDirectoryPath + `/${date}.jpg`; // Using react-native-fs path
     for (const image of imageData?.processedImages) {
       try {
-        const res = await FileSystem.downloadAsync(
-          image.data.doneImgUrl,
-          fileUri
-        );
-        saveFile(res.uri);
+        const res = await RNFS.downloadFile({
+          fromUrl: image.data.doneImgUrl,
+          toFile: fileUri,
+        }).promise;
+        saveFile(fileUri);
+        downloadImageHit();
       } catch (err) {
         console.log("FS Err: ", err);
       }
     }
-    Alert.alert("All images have been downloaded and saved.");
   };
 
   const saveFile = async (fileUri) => {
-    const { status } = await MediaLibrary.requestPermissionsAsync();
-    if (status === "granted") {
-      try {
-        const asset = await MediaLibrary.createAssetAsync(fileUri);
-        const album = await MediaLibrary.getAlbumAsync("Download");
-        if (album == null) {
-          await MediaLibrary.createAlbumAsync("Download", asset, false);
-        } else {
-          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-        }
-      } catch (err) {
-        console.log("Save err: ", err);
-      }
-    } else if (status === "denied") {
-      Alert.alert("please allow permissions to download");
+    try {
+      // Save the file to the device's camera roll/gallery using CameraRoll
+      await CameraRoll.saveAsset(fileUri, { type: "photo" });
+      console.log("File saved to gallery:", fileUri);
+      Alert.alert("All images have been saved to the gallery.");
+    } catch (err) {
+      console.log("Save err: ", err);
     }
   };
 
@@ -135,13 +179,14 @@ const ProcessTray = ({ navigation, route }) => {
       const fileUri = FileSystem.documentDirectory + `${date}.jpg`;
 
       try {
-        const response = await FileSystem.downloadAsync(
-          image.data.doneImgUrl,
-          fileUri
-        );
-        const asset = await saveFileAndroid(response.uri);
+        const response = await RNFS.downloadFile({
+          fromUrl: image.data.doneImgUrl,
+          toFile: fileUri,
+        }).promise;
+        const asset = await saveFileAndroid(response);
         if (asset) {
           assets.push(asset);
+          downloadImageHit();
         }
       } catch (err) {
         console.log("FS Err: ", err);
@@ -152,7 +197,7 @@ const ProcessTray = ({ navigation, route }) => {
       try {
         // After all images are downloaded, create or update the album
         await updateAlbum(assets);
-        Alert.alert("All images have been downloaded and saved.");
+        ("All images have been downloaded and saved.");
       } catch (err) {
         console.log("Album Update Error:", err);
       }
@@ -162,37 +207,53 @@ const ProcessTray = ({ navigation, route }) => {
   };
 
   const saveFileAndroid = async (fileUri) => {
-    const { status } = await MediaLibrary.requestPermissionsAsync();
-    if (status === "granted") {
-      return await MediaLibrary.createAssetAsync(fileUri);
-    } else {
+    try {
+      // Save the file to the camera roll using CameraRoll
+      const saved = await CameraRoll.saveAsset(fileUri, {
+        type: "photo",
+      });
+      return saved;
+    } catch (err) {
       Alert.alert("Please allow permissions to download.");
       return null; // Return null if permissions are not granted
     }
   };
 
   const updateAlbum = async (assets) => {
-    const album = await MediaLibrary.getAlbumAsync("Download");
-    if (album === null) {
-      // If the album doesn't exist, create it with the first asset on Android
-      await MediaLibrary.createAlbumAsync("Download", assets[0], false);
-      if (assets.length > 1) {
-        // Add the rest of the assets if there are more
-        await MediaLibrary.addAssetsToAlbumAsync(
-          assets.slice(1),
-          assets[0],
-          false
-        );
+    try {
+      // Create album or add to existing album
+      const albumName = "Download";
+      const firstAsset = assets[0];
+
+      // Check if the album exists. If not, create it.
+      const existingAlbum = await CameraRoll.getAlbums();
+      const album = existingAlbum.find((a) => a.title === albumName);
+
+      if (!album) {
+        // If the album doesn't exist, create it
+        await CameraRoll.saveAsset(firstAsset, { type: "photo" }); // Saving first image to create the album
+        Alert.alert("Album created successfully");
       }
-    } else {
-      // Add all assets to the existing album
-      await MediaLibrary.addAssetsToAlbumAsync(assets, album, false);
+
+      // Add all assets to the album
+      for (const asset of assets) {
+        await CameraRoll.saveAsset(asset, { type: "photo" });
+      }
+
+      Alert.alert("All images have been saved to the gallery.");
+    } catch (err) {
+      console.error("Error updating album:", err);
+      Alert.alert("Error updating album.");
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.container}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
+      <View
+        style={{
+          ...styles.container,
+        }}
+      >
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -223,10 +284,14 @@ const ProcessTray = ({ navigation, route }) => {
           </View>
           <View style={styles.statusContainer}>
             <View style={styles.dateContainer}>
-              <Text style={styles.timeStyle}>{formattedTime}</Text>
-              <Text style={styles.deliveredTxt}>Delivered in</Text>
+              <Text style={styles.deliveredTxt}>
+                Delivered in{" "}
+                <Text style={styles.timeStyle}>
+                  {formattedTimeDifference?.trim()}
+                </Text>
+              </Text>
             </View>
-            <View style={styles.dateContainer}>
+            <View style={styles.photoContainer}>
               <Text style={styles.numberTxt}>
                 {historyData?.processedImgCount === 0
                   ? historyData?.failedImgCount
@@ -247,48 +312,66 @@ const ProcessTray = ({ navigation, route }) => {
                 keyExtractor={(item) => item.id}
               />
             ) : (
-              <Image
-                source={failedImg}
-                style={{ height: "70%", width: "100%" }}
-              />
+              <View style={{ alignSelf: "center" }}>
+                <LottieView
+                  ref={(animation) => {
+                    animationRef = animation;
+                  }}
+                  source={errorIcon}
+                  autoPlay
+                  loop
+                  style={{
+                    width: 200,
+                    height: 200,
+                    zIndex: 1,
+                    marginBottom: -70,
+                  }}
+                />
+              </View>
               // <Text style={styles.bottomText}>Failed Images Found</Text>
             )}
           </View>
         </View>
       </View>
-      {screenName !== "History" && (
-        <View style={styles.btnContainer}>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("QAScreenScreen", {
-                imageData: imageData?.processedImages,
-                historyData: historyData,
-              })
-            }
-            style={styles.qaContainer}
-          >
-            <Text style={styles.btnText}>Check for Q&A</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={
-              Platform.OS === "ios" ? handleDownload : handleDownloadAndroid
-            }
-            style={styles.downloadContainer}
-          >
-            <Text style={styles.btnText}>Download All</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {screenName !== "History" &&
+        (imageData?.processedImages.length === 0 ? null : (
+          <View style={styles.btnContainer}>
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("QAScreenScreen", {
+                  imageData: imageData?.processedImages,
+                  historyData: historyData,
+                })
+              }
+              style={styles.qaContainer}
+            >
+              <Text style={styles.btnText}>Check for Q&A</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={
+                Platform.OS === "ios" ? handleDownload : handleDownloadAndroid
+              }
+              style={styles.downloadContainer}
+            >
+              <Text style={styles.btnText}>Download All</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+    padding: Platform.OS === "android" ? 10 : 20,
+  },
   container: {
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
-    backgroundColor: "#EAF7FF", // Background color of the screen
-    paddingTop: Platform.OS === "android" ? 15 : 0,
+    backgroundColor: "#EAF7FF",
   },
   btnText: {
     fontWeight: "bold",
@@ -355,11 +438,12 @@ const styles = StyleSheet.create({
     padding: 10,
     marginVertical: 5,
     height: 100,
+    width: "100%",
   },
   creditContainer: {
     flexDirection: "row",
     alignItems: "center",
-    width: "50%",
+    width: "60%",
   },
   subContainer: {
     marginLeft: 10,
@@ -380,7 +464,7 @@ const styles = StyleSheet.create({
   timeStyle: {
     color: "#66BAFF",
     fontWeight: "700",
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10),
   },
   deliveredTxt: {
     color: "#8A93A4",
@@ -399,8 +483,15 @@ const styles = StyleSheet.create({
   statusContainer: {
     flexDirection: "row",
     alignItems: "center",
+    width: "40%",
+    justifyContent: "flex-end",
   },
   dateContainer: {
+    alignItems: "center",
+    marginLeft: 10,
+    width: "40%",
+  },
+  photoContainer: {
     alignItems: "center",
     marginLeft: 10,
   },
@@ -447,7 +538,6 @@ const styles = StyleSheet.create({
   },
   imageStyle: {
     height: 100,
-    width: "49%",
     borderRadius: 10,
     margin: 2,
   },

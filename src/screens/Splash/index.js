@@ -6,30 +6,43 @@ import {
   TouchableOpacity,
   Text,
   Image,
+  Platform,
 } from "react-native";
 import React from "react";
 import LottieView from "lottie-react-native";
-import { icon } from "../../assets/lottie";
+import { icon1 } from "../../assets/lottie";
 import { moderateScale } from "../../utils/Scaling";
 import { carImg } from "../../assets/images";
+import Video from "react-native-video";
 
 const Splash = ({ navigation }) => {
   const { width, height } = Dimensions.get("screen");
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.container}>
-        <View style={{ flex: 0.4 }}>
-          <LottieView
-            ref={(animation) => {
-              animationRef = animation;
-            }}
-            source={icon}
-            autoPlay
-            loop
-            style={{ width: width, height: 300, zIndex: 1 }}
-          />
+        <View
+          style={{
+            flex: 0.45,
+            justifyContent: Platform.OS === "ios" ? "center" : "flex-end",
+          }}
+        >
+          {Platform.OS === "ios" ? (
+            <Video
+              source={require("../../assets/logo.mp4")}
+              style={{ width: width, height: 100, zIndex: 1 }}
+              resizeMode="cover"
+              repeat={true}
+            />
+          ) : (
+            <LottieView
+              source={icon1}
+              autoPlay
+              loop
+              style={{ width: width, height: 300, zIndex: 1 }}
+            />
+          )}
         </View>
-        <View style={{ flex: 0.5 }}>
+        <View style={{ flex: 0.45 }}>
           <Image
             source={carImg}
             resizeMode="contain"

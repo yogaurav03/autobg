@@ -9,6 +9,7 @@ import {
   FlatList,
   Image,
   Alert,
+  StatusBar,
 } from "react-native";
 import { LeftArrow, SelectedTick } from "../../assets/icons";
 import { image4 } from "../../assets/images";
@@ -60,7 +61,7 @@ const SelectBackground = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
       <View style={styles.container}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -115,11 +116,16 @@ const SelectBackground = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+    padding: Platform.OS === "android" ? 10 : 20,
+  },
   container: {
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF",
-    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   backButton: {
     flexDirection: "row",

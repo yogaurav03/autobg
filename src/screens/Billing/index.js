@@ -8,7 +8,10 @@ import {
   Platform,
   FlatList,
   RefreshControl,
+  TouchableOpacity,
+  StatusBar,
 } from "react-native";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import {
   BillingIcon,
   BottomArrow,
@@ -20,14 +23,15 @@ import {
   UpArrow,
 } from "../../assets/icons";
 import { image1, image2, image3 } from "../../assets/images";
-import {
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-} from "react-native-gesture-handler";
 import { useAppState } from "../../context/AppStateContext";
 import api from "../../utils/Api";
 import { APIURLS } from "../../utils/ApiUrl";
 import { moderateScale } from "../../utils/Scaling";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
+import Modal from "react-native-modal";
+import moment from "moment";
+import DateCard from "../../components/DataCard";
+import Loader from "../../components/Loader";
 
 const Billing = ({ navigation, route }) => {
   const userData = route.params?.userData;
@@ -36,6 +40,15 @@ const Billing = ({ navigation, route }) => {
   const [billingData, setBillingData] = useState(null);
   const [imageData, setImageData] = useState(null);
   const [openBatchId, setOpenBatchId] = useState(null);
+  const [isFilterModalVisible, setFilterModalVisible] = useState(false);
+  const [selectedStartDate, setSelectedStartDate] = useState(new Date());
+  const [selectedEndDate, setSelectedEndDate] = useState(new Date());
+  const [loader, setLoader] = useState(false);
+  const [isStartDatePickerVisible, setStartDatePickerVisibility] =
+    useState(false);
+  const [isEndDatePickerVisible, setEndDatePickerVisibility] = useState(false);
+
+  const [filterData, setFilterData] = useState([]);
 
   const handleToggle = async (id) => {
     if (id === openBatchId) {
@@ -53,11 +66,18 @@ const Billing = ({ navigation, route }) => {
 
   const fetchBillingData = async () => {
     try {
+      setLoader(true);
       if (state.token) {
         const response = await api.get(APIURLS.usageHistory, state.token);
         setBillingData(response.data);
+        setFilterData(response.data);
+        setFilterModalVisible(false);
+        setSelectedStartDate(new Date());
+        setSelectedEndDate(new Date());
+        setLoader(false);
       }
     } catch (error) {
+      setLoader(false);
       console.error("Failed to fetch user data:", error);
     }
   };
@@ -78,7 +98,7 @@ const Billing = ({ navigation, route }) => {
     const time = collectionCreatedAt.toTimeString().split(" ")[0];
     const isOpen = item?.batchId === openBatchId;
     return (
-      <TouchableWithoutFeedback
+      <TouchableOpacity
         onPress={() => handleToggle(item?.batchId)}
         style={styles.blueContainer}
       >
@@ -143,12 +163,56 @@ const Billing = ({ navigation, route }) => {
             </View>
           </View>
         )}
-      </TouchableWithoutFeedback>
+      </TouchableOpacity>
     );
   };
 
+  const applyDateFilter = () => {
+    // Close the modal first
+    setFilterModalVisible(false);
+
+    // Assuming historyData is already populated and each item has a date field
+    // Convert selectedStartDate and selectedEndDate to the start of their respective days for comparison
+    const startOfDaySelectedStartDate = new Date(
+      selectedStartDate.setHours(0, 0, 0, 0)
+    );
+    const startOfDaySelectedEndDate = new Date(
+      selectedEndDate.setHours(23, 59, 59, 999)
+    );
+
+    // Filter the history data based on the selected date range
+    const filteredData = billingData.filter((item) => {
+      const collectionCreatedAt = new Date(item?.date);
+
+      // Parse the date from your item, assuming it's in collectionData.collectionCreatedAt
+      const itemDate = new Date(collectionCreatedAt);
+
+      // Check if the item's date falls within the selected range
+      return (
+        itemDate >= startOfDaySelectedStartDate &&
+        itemDate <= startOfDaySelectedEndDate
+      );
+    });
+
+    // Update your state with the filtered data
+    setFilterData(filteredData); // Or use a separate state variable if you want to preserve the original data
+  };
+
+  const handleConfirmStartDate = (date) => {
+    setStartDatePickerVisibility(false);
+    setSelectedStartDate(date);
+  };
+
+  const handleConfirmEndDate = (date) => {
+    setEndDatePickerVisibility(false);
+    setSelectedEndDate(date);
+  };
+
+  const isCurrentCountPresent = userData?.userDetails?.currentCredits < 10;
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
+      {loader && <Loader />}
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity
@@ -158,39 +222,78 @@ const Billing = ({ navigation, route }) => {
             <LeftArrow />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
-          <View style={styles.taskTrayContainer}>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate("ProfileScreen", {
+                isBackPresent: true,
+              })
+            }
+            style={styles.taskTrayContainer}
+          >
             <ProfileIcon />
-          </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.headerContainer}>
           <View style={styles.creditContainer}>
             <ClubIcon height={25} width={25} />
             <View style={styles.subContainer}>
-              <Text style={styles.bottomText}>Current Plan</Text>
+              <Text style={styles.bottomText}>Current Limit</Text>
               <Text style={styles.planText}>
                 <Text style={styles.boldText}>
-                  {userData?.userDetails?.totalCredits} credits
+                  {userData?.userDetails?.totalCredits}{" "}
+                  {userData?.userDetails?.totalCredits === 1
+                    ? "image"
+                    : "images"}
                 </Text>{" "}
-                / per month
+                {/* / per month */}
               </Text>
             </View>
           </View>
-          <View style={styles.statusContainer}>
-            <View style={styles.dot} />
-            <Text style={styles.statusText}>Active</Text>
+          <View
+            style={{
+              ...styles.statusContainer,
+              borderColor: isCurrentCountPresent ? "#FF000080" : "#8BED0F",
+            }}
+          >
+            <View
+              style={{
+                ...styles.dot,
+                backgroundColor: isCurrentCountPresent
+                  ? "#FF000080"
+                  : "#8BED0F",
+              }}
+            />
+            <Text
+              style={{
+                ...styles.statusText,
+                color: isCurrentCountPresent ? "#FF000090" : "#69BB01",
+              }}
+            >
+              {isCurrentCountPresent
+                ? "Low Credits"
+                : userData?.userDetails?.currentCredits === 0
+                ? "Inactive"
+                : "Active"}
+            </Text>
           </View>
         </View>
 
         <View style={styles.headerContainer}>
-          <View style={styles.creditContainer}>
+          <View style={{ ...styles.creditContainer, width: "40%" }}>
             <CurrencyIcon height={30} width={30} />
             <View style={styles.subContainer}>
-              <Text style={styles.creditText}>Credit</Text>
+              <Text style={styles.creditText}>Image</Text>
               <Text style={styles.balText}>Balance</Text>
             </View>
           </View>
-          <View style={{ marginTop: Platform.OS === "ios" ? -2 : -6 }}>
+          <View
+            style={{
+              marginTop: Platform.OS === "ios" ? -2 : -6,
+              width: "60%",
+              alignItems: "flex-end",
+            }}
+          >
             <Text style={styles.balanceText}>
               {userData?.userDetails?.currentCredits}
             </Text>
@@ -203,32 +306,135 @@ const Billing = ({ navigation, route }) => {
               <BillingIcon />
               <Text style={styles.historyText}>Billing</Text>
             </View>
-            <View style={styles.viewAllContainer}>
-              <FilterIcon />
-              <Text style={styles.viewAllText}>Filter</Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <TouchableOpacity
+                onPress={fetchBillingData}
+                style={{
+                  ...styles.viewAllContainer,
+                  backgroundColor: "#939598",
+                }}
+              >
+                <Text style={{ ...styles.viewAllText, marginLeft: 0 }}>
+                  Clear Filter
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setFilterModalVisible(true)}
+                style={styles.viewAllContainer}
+              >
+                <FilterIcon />
+                <Text style={styles.viewAllText}>Filter</Text>
+              </TouchableOpacity>
             </View>
           </View>
-          <FlatList
-            data={billingData}
-            renderItem={renderItem}
-            keyExtractor={(item) => item?.batchId}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            showsVerticalScrollIndicator={false}
-          />
+          {filterData.length === 0 ? (
+            <View style={styles.noDataContainer}>
+              <Text style={styles.noDataText}>No Data</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filterData}
+              renderItem={renderItem}
+              keyExtractor={(item) => item?.batchId}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              }
+              showsVerticalScrollIndicator={false}
+            />
+          )}
         </View>
       </View>
+      <Modal
+        isVisible={isFilterModalVisible}
+        onBackdropPress={() => setFilterModalVisible(false)}
+      >
+        <View style={styles.modalContent}>
+          <View
+            style={{
+              ...styles.row,
+              justifyContent: "space-between",
+              width: "100%",
+              marginBottom: 20,
+            }}
+          >
+            <View style={styles.row}>
+              <View style={styles.iconContainer}>
+                <Icon name="event" size={moderateScale(24)} color="#ACACAC" />
+              </View>
+              <View>
+                <Text style={styles.dateTitle}>Select Dates</Text>
+                <Text style={styles.dateDecs}>
+                  Select dates for filtering billing data{" "}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={{ alignSelf: "flex-end" }}
+              onPress={() => setFilterModalVisible(false)}
+            >
+              <Text style={{ fontSize: moderateScale(22), color: "#BBBBBB" }}>
+                X
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {/* <Text>Select Start Date:</Text>
+          <TouchableOpacity onPress={() => setStartDatePickerVisibility(true)}>
+            <Text style={{ color: "#2499DA", fontSize: moderateScale(18) }}>
+              {moment(selectedStartDate).format("MMMM Do YYYY")}
+            </Text>
+          </TouchableOpacity> */}
+          <DateCard
+            onPress={() => setStartDatePickerVisibility(true)}
+            title="Start Date"
+            date={moment(selectedStartDate).format("MMMM Do YYYY")}
+          />
+
+          <DateTimePickerModal
+            isVisible={isStartDatePickerVisible}
+            mode="date"
+            onConfirm={handleConfirmStartDate}
+            onCancel={() => setStartDatePickerVisibility(false)}
+          />
+          {/* <Text>Select End Date:</Text>
+          <TouchableOpacity onPress={() => setEndDatePickerVisibility(true)}>
+            <Text style={{ color: "#2499DA", fontSize: moderateScale(18) }}>
+              {moment(selectedEndDate).format("MMMM Do YYYY")}
+            </Text>
+          </TouchableOpacity> */}
+          <DateCard
+            onPress={() => setEndDatePickerVisibility(true)}
+            title="End Date"
+            date={moment(selectedEndDate).format("MMMM Do YYYY")}
+          />
+          <DateTimePickerModal
+            isVisible={isEndDatePickerVisible}
+            mode="date"
+            onConfirm={handleConfirmEndDate}
+            onCancel={() => setEndDatePickerVisibility(false)}
+          />
+          <View>
+            <TouchableOpacity style={styles.button} onPress={applyDateFilter}>
+              <FilterIcon width={20} height={20} />
+              <Text style={styles.buttonText}>Apply Filter</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+    padding: Platform.OS === "android" ? 10 : 20,
+  },
   container: {
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
-    backgroundColor: "#EAF7FF", // Background color of the screen
-    paddingTop: Platform.OS === "android" ? 15 : 0,
+    backgroundColor: "#EAF7FF",
   },
   header: {
     flexDirection: "row",
@@ -252,15 +458,17 @@ const styles = StyleSheet.create({
     elevation: 5,
     padding: 10,
     marginVertical: 5,
-    height: 60,
   },
   creditContainer: {
     flexDirection: "row",
     alignItems: "center",
+    width: "70%",
   },
   subContainer: {
     marginLeft: 10,
+    width: "70%",
   },
+  row: { flexDirection: "row", alignItems: "center" },
   creditText: {
     color: "#33A3FF",
     fontWeight: "500",
@@ -292,6 +500,7 @@ const styles = StyleSheet.create({
     padding: 10,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
   },
   iconStyle: {
     flexDirection: "row",
@@ -365,6 +574,16 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
   },
+  dateTitle: {
+    fontSize: moderateScale(28),
+    color: "#32A1FC",
+    fontWeight: "700",
+  },
+  dateDecs: {
+    fontSize: moderateScale(10),
+    color: "#B3B3B3",
+    fontWeight: "300",
+  },
   rowText: {
     fontSize: moderateScale(26),
     color: "#E1E1E1",
@@ -403,6 +622,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 2,
     marginBottom: 7,
+    width: "30%",
+    justifyContent: "center",
   },
   dot: {
     width: 8,
@@ -443,6 +664,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderRadius: 10,
     padding: 10,
+    paddingBottom: 70,
   },
   historyHeader: {
     flexDirection: "row",
@@ -464,14 +686,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#2499DA",
-    padding: 10,
+    padding: 8,
     borderRadius: 20,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
+    marginHorizontal: 5,
   },
   viewAllText: {
     color: "#FFFFFF",
     fontWeight: "600",
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(12),
     marginLeft: 10,
   },
   blueContainer: {
@@ -531,6 +754,38 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12),
     color: "#CACACA",
     marginTop: 5,
+  },
+  modalContent: {
+    backgroundColor: "white",
+    padding: 22,
+    borderRadius: 20,
+    alignItems: "center",
+  },
+  button: {
+    marginTop: 20,
+    backgroundColor: "#2499DA",
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 50,
+  },
+  buttonText: {
+    color: "#ffffff",
+    fontSize: moderateScale(14),
+    textAlign: "center",
+    fontWeight: "600",
+    marginLeft: 10,
+  },
+  noDataContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  noDataText: {
+    fontSize: moderateScale(16),
+    color: "#8A93A4",
+    fontWeight: "700",
   },
 });
 

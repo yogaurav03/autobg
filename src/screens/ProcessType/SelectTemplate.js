@@ -9,8 +9,10 @@ import {
   ScrollView,
   Image,
   Alert,
+  StatusBar,
+  Linking,
 } from "react-native";
-import { LeftArrow } from "../../assets/icons";
+import { LeftArrow, NoTemplate } from "../../assets/icons";
 import { useAppState } from "../../context/AppStateContext";
 import api from "../../utils/Api";
 import { APIURLS } from "../../utils/ApiUrl";
@@ -34,7 +36,7 @@ const TemplateCard = ({ id, name, onPress, isSelected, image }) => {
 const SelectTemplate = ({ navigation, route }) => {
   const { state } = useAppState();
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
-  const [templateData, setTemplateData] = useState(null);
+  const [templateData, setTemplateData] = useState([]);
 
   const numberPlate = route.params?.numberPlate;
 
@@ -81,63 +83,142 @@ const SelectTemplate = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.container}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <LeftArrow />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.header}>Select</Text>
-        <Text style={styles.SelectTemplate}>Template</Text>
-
-        <View style={styles.lineContainer}>
-          <View style={styles.lineBlue} />
-
-          <View style={styles.lineBlue} />
-          <View style={styles.lineGray} />
-        </View>
-
-        {/* Scrollable list of template cards */}
-        <ScrollView style={styles.templateList}>
-          {templateData?.map((template) => (
-            <TemplateCard
-              key={template.templateId}
-              id={template.templateId}
-              name={template.templateName}
-              onPress={handleTemplatePress}
-              isSelected={template.templateId === selectedTemplateId}
-              image={template.backdropImg}
-            />
-          ))}
-        </ScrollView>
-
-        <View style={styles.subContainer}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
+      {templateData.length === 0 ? (
+        <View style={styles.container}>
           <TouchableOpacity
-            disabled={selectedTemplateId === null ? true : false}
-            onPress={() => createBatch()}
-            style={[
-              styles.nextButton,
-              selectedTemplateId === null ? styles.disabledBtn : {},
-            ]}
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
           >
-            <Text style={styles.nextButtonText}>NEXT</Text>
+            <LeftArrow />
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+          <View
+            style={{
+              flex: 1,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#D3EEFF",
+              marginTop: 10,
+            }}
+          >
+            <View
+              style={{
+                borderWidth: 1,
+                borderRadius: 100,
+                borderWidth: 15,
+                borderColor: "#2499DA4D",
+              }}
+            >
+              <NoTemplate />
+            </View>
+            <View
+              style={{
+                backgroundColor: "#9FD5F4",
+                paddingVertical: 17,
+                paddingHorizontal: 26,
+                borderRadius: 8,
+                marginHorizontal: 10,
+                marginVertical: 30,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: "#004E8E",
+                  fontSize: moderateScale(10),
+                  fontWeight: "400",
+                  textAlign: "center",
+                }}
+              >
+                No templates found. Please visit our website and create template
+                to proceed.
+              </Text>
+              <Text
+                style={{
+                  color: "#004E8E",
+                  fontSize: moderateScale(10),
+                  fontWeight: "700",
+                  textAlign: "center",
+                  marginVertical: 10,
+                }}
+                onPress={() => Linking.openURL("https://autobg.ai/")}
+              >
+                www.Autobg.ai
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("MainScreen")}
+            style={[styles.nextButton, { alignSelf: "center" }]}
+          >
+            <Text style={styles.nextButtonText}>Back to dashboard</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      ) : (
+        <View style={styles.container}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <LeftArrow />
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.header}>Select</Text>
+          <Text style={styles.SelectTemplate}>Template</Text>
+
+          <View style={styles.lineContainer}>
+            <View style={styles.lineBlue} />
+
+            <View style={styles.lineBlue} />
+            <View style={styles.lineGray} />
+          </View>
+
+          {/* Scrollable list of template cards */}
+          <ScrollView style={styles.templateList}>
+            {templateData?.map((template) => (
+              <TemplateCard
+                key={template.templateId}
+                id={template.templateId}
+                name={template.templateName}
+                onPress={handleTemplatePress}
+                isSelected={template.templateId === selectedTemplateId}
+                image={template.backdropImg}
+              />
+            ))}
+          </ScrollView>
+
+          <View style={styles.subContainer}>
+            <TouchableOpacity
+              disabled={selectedTemplateId === null ? true : false}
+              onPress={() => createBatch()}
+              style={[
+                styles.nextButton,
+                selectedTemplateId === null ? styles.disabledBtn : {},
+              ]}
+            >
+              <Text style={styles.nextButtonText}>NEXT</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+    padding: Platform.OS === "android" ? 10 : 20,
+  },
   container: {
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF",
-    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   backButton: {
     flexDirection: "row",

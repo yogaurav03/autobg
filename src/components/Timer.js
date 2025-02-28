@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text } from "react-native";
+import Icon from "react-native-vector-icons/Feather";
 import Svg, { G, Circle, Line, Text as SvgText } from "react-native-svg";
-import { ClockIcon } from "../assets/icons";
 import { moderateScale } from "../utils/Scaling";
 
 const Timer = ({ totalTime }) => {
@@ -75,7 +75,7 @@ const Timer = ({ totalTime }) => {
               justifyContent: "center",
             }}
           >
-            <ClockIcon />
+            <Icon name="clock" size={moderateScale(24)} color="#ACACAC" />
             <Text
               style={{
                 color: "#2499DA",

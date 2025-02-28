@@ -8,16 +8,22 @@ import {
   Platform,
   Image,
   FlatList,
+  StatusBar,
 } from "react-native";
 import React, { useCallback, useEffect, useState } from "react";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import { image1, image2, image3 } from "../../assets/images";
 import { FilterIcon, LeftArrow, RightArrow } from "../../assets/icons";
 import { useAppState } from "../../context/AppStateContext";
 import api from "../../utils/Api";
 import { APIURLS } from "../../utils/ApiUrl";
-import DatePicker from "react-native-date-picker";
+// import DatePicker from "react-native-date-picker";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Modal from "react-native-modal";
 import { moderateScale } from "../../utils/Scaling";
+import moment from "moment";
+import DateCard from "../../components/DataCard";
+import Loader from "../../components/Loader";
 
 const History = ({ navigation }) => {
   const { state } = useAppState();
@@ -27,15 +33,25 @@ const History = ({ navigation }) => {
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedStartDate, setSelectedStartDate] = useState(new Date());
   const [selectedEndDate, setSelectedEndDate] = useState(new Date());
+  const [loader, setLoader] = useState(false);
+  const [isStartDatePickerVisible, setStartDatePickerVisibility] =
+    useState(false);
+  const [isEndDatePickerVisible, setEndDatePickerVisibility] = useState(false);
 
   const fetchHistoryData = async () => {
     try {
+      setLoader(true);
       if (state.token) {
         const response = await api.get(APIURLS.getHistory, state.token);
         setHistoryData(response.data);
         setFilterData(response.data);
+        setFilterModalVisible(false);
+        setSelectedStartDate(new Date());
+        setSelectedEndDate(new Date());
+        setLoader(false);
       }
     } catch (error) {
+      setLoader(false);
       console.error("Failed to fetch user data:", error);
     }
   };
@@ -123,13 +139,27 @@ const History = ({ navigation }) => {
           </View>
 
           {/* Right side of list container */}
-          <RightArrow />
+          <View style={{ marginRight: 10 }}>
+            <RightArrow />
+          </View>
         </View>
       </TouchableOpacity>
     );
   };
+
+  const handleConfirmStartDate = (date) => {
+    setStartDatePickerVisibility(false);
+    setSelectedStartDate(date);
+  };
+
+  const handleConfirmEndDate = (date) => {
+    setEndDatePickerVisibility(false);
+    setSelectedEndDate(date);
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
+      {loader && <Loader />}
       <View style={styles.container}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -140,22 +170,43 @@ const History = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={styles.history}>History</Text>
         <Text style={styles.subTextHistory}>
-          All processes are listed below.
+          All processed images are listed below.
         </Text>
         <View style={styles.historyContainer}>
-          <TouchableOpacity
-            onPress={() => setFilterModalVisible(true)}
-            style={styles.viewAllContainer}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              alignSelf: "flex-end",
+            }}
           >
-            <FilterIcon />
-            <Text style={styles.viewAllText}>Filter</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={fetchHistoryData}
+              style={{
+                ...styles.viewAllContainer,
+                backgroundColor: "#939598",
+              }}
+            >
+              <Text style={{ ...styles.viewAllText, marginLeft: 0 }}>
+                Clear Filter
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setFilterModalVisible(true)}
+              style={styles.viewAllContainer}
+            >
+              <FilterIcon />
+              <Text style={styles.viewAllText}>Filter</Text>
+            </TouchableOpacity>
+          </View>
           {filterData.length === 0 ? (
             <View style={styles.noDataContainer}>
               <Text style={styles.noDataText}>No Data</Text>
             </View>
           ) : (
             <FlatList
+              showsVerticalScrollIndicator={false}
               data={filterData}
               renderItem={renderItem}
               keyExtractor={(item) => item?.collectionData?.collectionId}
@@ -171,21 +222,74 @@ const History = ({ navigation }) => {
         onBackdropPress={() => setFilterModalVisible(false)}
       >
         <View style={styles.modalContent}>
-          <Text>Select Start Date:</Text>
-          <DatePicker
-            date={selectedStartDate}
-            onDateChange={setSelectedStartDate}
-            mode="date"
+          <View
+            style={{
+              ...styles.row,
+              justifyContent: "space-between",
+              width: "100%",
+              marginBottom: 20,
+            }}
+          >
+            <View style={styles.row}>
+              <View style={styles.iconContainer}>
+                <Icon name="event" size={moderateScale(24)} color="#ACACAC" />
+              </View>
+              <View>
+                <Text style={styles.dateTitle}>Select Dates</Text>
+                <Text style={styles.dateDecs}>
+                  Select dates for filtering billing data{" "}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={{ alignSelf: "flex-end" }}
+              onPress={() => setFilterModalVisible(false)}
+            >
+              <Text style={{ fontSize: moderateScale(22), color: "#BBBBBB" }}>
+                X
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {/* <Text>Select Start Date:</Text>
+          <TouchableOpacity onPress={() => setStartDatePickerVisibility(true)}>
+            <Text style={{ color: "#2499DA", fontSize: moderateScale(18) }}>
+              {moment(selectedStartDate).format("MMMM Do YYYY")}
+            </Text>
+          </TouchableOpacity> */}
+          <DateCard
+            onPress={() => setStartDatePickerVisibility(true)}
+            title="Start Date"
+            date={moment(selectedStartDate).format("MMMM Do YYYY")}
           />
-          <Text>Select End Date:</Text>
-          <DatePicker
-            date={selectedEndDate}
-            onDateChange={setSelectedEndDate}
+          <DateTimePickerModal
+            isVisible={isStartDatePickerVisible}
             mode="date"
+            onConfirm={handleConfirmStartDate}
+            onCancel={() => setStartDatePickerVisibility(false)}
           />
-          <TouchableOpacity style={styles.button} onPress={applyDateFilter}>
-            <Text style={styles.buttonText}>Apply Filter</Text>
-          </TouchableOpacity>
+          {/* <Text>Select End Date:</Text>
+          <TouchableOpacity onPress={() => setEndDatePickerVisibility(true)}>
+            <Text style={{ color: "#2499DA", fontSize: moderateScale(18) }}>
+              {moment(selectedEndDate).format("MMMM Do YYYY")}
+            </Text>
+          </TouchableOpacity> */}
+          <DateCard
+            onPress={() => setEndDatePickerVisibility(true)}
+            title="End Date"
+            date={moment(selectedEndDate).format("MMMM Do YYYY")}
+          />
+          <DateTimePickerModal
+            isVisible={isEndDatePickerVisible}
+            mode="date"
+            onConfirm={handleConfirmEndDate}
+            onCancel={() => setEndDatePickerVisibility(false)}
+          />
+          <View>
+            <TouchableOpacity style={styles.button} onPress={applyDateFilter}>
+              <FilterIcon width={20} height={20} />
+              <Text style={styles.buttonText}>Apply Filter</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -193,11 +297,16 @@ const History = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+    padding: Platform.OS === "android" ? 10 : 20,
+  },
   container: {
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
-    backgroundColor: "#EAF7FF", // Background color of the screen
-    paddingTop: Platform.OS === "android" ? 15 : 0,
+    backgroundColor: "#EAF7FF",
   },
   iconStyle: {
     flexDirection: "row",
@@ -282,11 +391,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 10,
   },
+  row: { flexDirection: "row", alignItems: "center" },
   iconContainer: {
     borderColor: "grey",
     borderRadius: 5,
     padding: 5,
     marginRight: 5,
+  },
+  dateTitle: {
+    fontSize: moderateScale(28),
+    color: "#32A1FC",
+    fontWeight: "700",
+  },
+  dateDecs: {
+    fontSize: moderateScale(10),
+    color: "#B3B3B3",
+    fontWeight: "300",
   },
   rowIcon: {
     width: 20,
@@ -402,15 +522,15 @@ const styles = StyleSheet.create({
   },
   viewAllContainer: {
     backgroundColor: "#2499DA",
-    padding: 10,
+    padding: 8,
     borderRadius: 20,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
-    width: "35%",
     alignSelf: "flex-end",
     justifyContent: "center",
     marginVertical: 20,
+    marginHorizontal: 5,
   },
   viewAllText: {
     color: "#FFFFFF",
@@ -486,15 +606,19 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 20,
     backgroundColor: "#2499DA",
-    paddingVertical: 10,
+    paddingVertical: 13,
     paddingHorizontal: 20,
     borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 50,
   },
   buttonText: {
     color: "#ffffff",
     fontSize: moderateScale(14),
     textAlign: "center",
     fontWeight: "600",
+    marginLeft: 10,
   },
   noDataContainer: {
     justifyContent: "center",

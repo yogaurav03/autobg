@@ -8,30 +8,37 @@ import {
   Image,
   Alert,
   ScrollView,
+  StatusBar,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import * as ScreenOrientation from "expo-screen-orientation";
+import Orientation from "react-native-orientation-locker";
 import api from "../../utils/Api";
 import { APIURLS } from "../../utils/ApiUrl";
 import { LeftArrow } from "../../assets/icons";
 import { moderateScale, scale, verticalScale } from "../../utils/Scaling";
-import {
-  AcMedia,
-  BackAngle,
-  BootSpace,
-  CenterDashboard,
-  DoorView,
-  FrontAngle,
-  LeftAngle,
-  LeftSideAngle,
-  Meter,
-  RightAngle,
-  RightSideAngle,
-  SpeedoMeter,
-  Steering,
-} from "../../assets/icons";
 import { useAppState } from "../../context/AppStateContext";
 import { useNavigation } from "@react-navigation/native";
+import {
+  backCar,
+  backLeftAngleCar,
+  backRightAngleCar,
+  frontCar,
+  leftAngleCar,
+  leftSideCar,
+  rightAngleCar,
+  rightSideCar,
+} from "../../assets/images";
+import {
+  CarAcConsole,
+  CarTrunk,
+  CarWheel,
+  DriverSideView,
+  MidConsoleView,
+  MidConsoleViewRight,
+  PassengerBackViewLeft,
+  PassengerBackViewRight,
+  PassengerSideView,
+} from "../../assets/icons/interiorAngles";
 
 const CheckImages = ({ route }) => {
   const [selectedView, setSelectedView] = useState("Exterior");
@@ -43,75 +50,107 @@ const CheckImages = ({ route }) => {
   const userId = state?.profileData?.userDetails?.id;
   const batchId = route?.params?.batchId;
   const selectedTemplateId = route?.params?.selectedTemplateId;
+  const isLeftHandSelected = route?.params?.isLeftHandSelected;
 
   const [carAngles, setCarAngles] = useState([
     {
       id: 1,
-      icon: <FrontAngle width={80} height={80} />,
+      icon: frontCar,
       name: "Front View",
     },
     {
       id: 2,
-      icon: <BackAngle width={80} height={80} />,
-      name: "Back View",
+      icon: rightAngleCar,
+      name: "3/4th Front Right View",
     },
     {
       id: 3,
-      icon: <LeftSideAngle width={80} height={80} />,
-      name: "Left View",
-    },
-    {
-      id: 4,
-      icon: <RightSideAngle width={80} height={80} />,
+      icon: rightSideCar,
       name: "Right View",
     },
     {
+      id: 4,
+      icon: backRightAngleCar,
+      name: "3/4th Rear Right View",
+    },
+    {
       id: 5,
-      icon: <LeftAngle width={80} height={80} />,
-      name: "3/4th Rear View",
+      icon: backCar,
+      name: "Back View",
     },
     {
       id: 6,
-      icon: <RightAngle width={80} height={80} />,
-      name: "3/4th Front View",
+      icon: backLeftAngleCar,
+      name: "3/4th Rear Left View",
+    },
+    {
+      id: 7,
+      icon: leftSideCar,
+      name: "Left View",
+    },
+    {
+      id: 8,
+      icon: leftAngleCar,
+      name: "3/4th Front Left View",
     },
   ]);
 
   const [interiorAngles, setInteriorAngles] = useState([
     {
       id: 1,
-      icon: <BootSpace width={80} height={80} />,
-      name: "Boot Space",
+      icon: <CarWheel width={100} height={100} />,
+      name: "Car Wheel",
     },
     {
       id: 2,
-      icon: <CenterDashboard width={80} height={80} />,
-      name: "Center Dashboard",
+      icon: <CarTrunk width={100} height={100} />,
+      name: "Car Trunk",
     },
     {
       id: 3,
-      icon: <AcMedia width={80} height={80} />,
-      name: "Ac Media",
+      icon: isLeftHandSelected ? (
+        <PassengerBackViewLeft width={100} height={100} />
+      ) : (
+        <PassengerBackViewRight width={100} height={100} />
+      ),
+      name: isLeftHandSelected
+        ? "Passenger Back View Left"
+        : "Passenger Back View Right",
     },
     {
       id: 4,
-      icon: <SpeedoMeter width={80} height={80} />,
-      name: "Speedo Meter",
+      icon: isLeftHandSelected ? (
+        <PassengerBackViewRight width={100} height={100} />
+      ) : (
+        <PassengerBackViewLeft width={100} height={100} />
+      ),
+      name: isLeftHandSelected
+        ? "Passenger Back View Right"
+        : "Passenger Back View Left",
     },
     {
       id: 5,
-      icon: <DoorView width={80} height={80} />,
-      name: "Door View",
+      icon: isLeftHandSelected ? (
+        <MidConsoleView width={100} height={100} />
+      ) : (
+        <MidConsoleViewRight width={100} height={100} />
+      ),
+      name: "Mid Console View",
     },
     {
       id: 6,
-      icon: <Meter width={80} height={80} />,
-      name: "Meter",
+      icon: <CarAcConsole width={100} height={100} />,
+      name: "Ac Console",
     },
     {
       id: 7,
-      icon: <Steering width={80} height={80} />,
-      name: "Steering",
+      icon: <DriverSideView width={100} height={100} />,
+      name: "Driver Side View",
+    },
+    {
+      id: 8,
+      icon: <PassengerSideView width={100} height={100} />,
+      name: "Passenger Side View",
     },
   ]);
 
@@ -155,12 +194,12 @@ const CheckImages = ({ route }) => {
     const unsubscribeFocus = navigation.addListener("focus", () => {
       // Optionally introduce a delay if needed
       setTimeout(() => {
-        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+        Orientation.lockToPortrait();
       }, 100); // Delay for 100 milliseconds, adjust as necessary
     });
 
     const unsubscribeBlur = navigation.addListener("blur", () => {
-      ScreenOrientation.unlockAsync();
+      Orientation.unlockAllOrientations();
     });
 
     return () => {
@@ -199,7 +238,7 @@ const CheckImages = ({ route }) => {
     }
   };
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity
@@ -254,14 +293,25 @@ const CheckImages = ({ route }) => {
             ? carAngles.map((item) => (
                 <View key={item.id} style={styles.listContainer}>
                   <View style={styles.subContainer}>
-                    {item?.icon}
+                    <Image
+                      style={{ width: 100, height: 100 }}
+                      resizeMode="contain"
+                      source={item.icon}
+                    />
                     <Text style={styles.angleTxt}>{item?.name}</Text>
                   </View>
                   <View style={styles.subContainer}>
-                    <Image
-                      style={styles.imgStyle}
-                      source={{ uri: item?.path }}
-                    />
+                    {item?.path === undefined || item?.path === "" ? (
+                      <Text>No Data</Text>
+                    ) : (
+                      <Image
+                        style={[styles.imgStyle]}
+                        resizeMode="contain"
+                        source={{
+                          uri: item?.path,
+                        }}
+                      />
+                    )}
                   </View>
                 </View>
               ))
@@ -272,15 +322,22 @@ const CheckImages = ({ route }) => {
                     <Text style={styles.angleTxt}>{item.name}</Text>
                   </View>
                   <View style={styles.subContainer}>
-                    <Image
-                      style={styles.imgStyle}
-                      source={{
-                        uri:
-                          item?.path === undefined
-                            ? "https://via.placeholder.com/300x300.png?text=No+Data"
-                            : item?.path,
-                      }}
-                    />
+                    {item?.path === undefined || item?.path === "" ? (
+                      <Text> No Data</Text>
+                    ) : (
+                      <Image
+                        style={[
+                          styles.imgStyle,
+                          Platform.OS === "ios" && {
+                            transform: [{ rotate: "90deg" }],
+                          },
+                        ]}
+                        resizeMode="contain"
+                        source={{
+                          uri: item?.path,
+                        }}
+                      />
+                    )}
                   </View>
                 </View>
               ))}
@@ -299,11 +356,16 @@ const CheckImages = ({ route }) => {
 export default CheckImages;
 
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+    padding: Platform.OS === "android" ? 10 : 20,
+  },
   container: {
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
-    backgroundColor: "#EAF7FF", // Background color of the screen
-    paddingTop: Platform.OS === "android" ? 15 : 0,
+    backgroundColor: "#EAF7FF",
   },
   header: {
     flexDirection: "row",
@@ -389,6 +451,5 @@ const styles = StyleSheet.create({
   imgStyle: {
     height: verticalScale(100),
     width: scale(150),
-    resizeMode: "contain",
   },
 });

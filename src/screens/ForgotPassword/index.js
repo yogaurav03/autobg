@@ -78,10 +78,22 @@ const ForgotPassword = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
         <View style={styles.termsView}>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate("TermsPolicyScreen", {
+                screenName: "Terms",
+              })
+            }
+          >
             <Text style={styles.termsText}>Terms and condition </Text>
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate("TermsPolicyScreen", {
+                screenName: "Privacy",
+              })
+            }
+          >
             <Text style={styles.termsText}>Privacy policy </Text>
           </TouchableOpacity>
         </View>
@@ -169,9 +181,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   termsView: {
-    position: "absolute",
-    bottom: 30,
     alignSelf: "center",
+    marginTop: 50,
   },
 });
 

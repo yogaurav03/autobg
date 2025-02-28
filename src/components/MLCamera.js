@@ -1,10 +1,5 @@
-// import * as cocoSsd from "@tensorflow-models/coco-ssd";
-// import * as tf from "@tensorflow/tfjs";
-// import { cameraWithTensors } from "@tensorflow/tfjs-react-native";
-// import { Camera } from "expo-camera";
-import { RNCamera } from "react-native-camera";
 import { Camera, useCameraDevice } from "react-native-vision-camera";
-import * as ScreenOrientation from "expo-screen-orientation";
+import Orientation from "react-native-orientation-locker";
 import React, {
   useEffect,
   forwardRef,
@@ -17,13 +12,12 @@ import {
   Dimensions,
   LogBox,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { MD2Colors } from "react-native-paper";
 // import Canvas from "react-native-canvas";
 
 // const TensorCamera = cameraWithTensors(Camera);
@@ -36,16 +30,12 @@ const MLCamera = forwardRef((props, ref) => {
 
   const cameraRef = useRef(null);
   const [dimensions, setDimensions] = useState(Dimensions.get("window"));
-  const [model, setModel] = useState(null);
-  let context = useRef(null);
-  const canvas = useRef(null);
-  const [zoom, setZoom] = useState(0);
-  const [isActive, setIsActive] = useState(false);
+  const [isActive, setIsActive] = useState(true);
   const [isCameraReady, setIsCameraReady] = useState(false);
   useEffect(() => {
     setTimeout(() => {
-      setIsActive(true);
-    }, 500);
+      setIsActive(false);
+    }, 200);
   }, []);
 
   useImperativeHandle(ref, () => ({
@@ -71,96 +61,13 @@ const MLCamera = forwardRef((props, ref) => {
 
   const { width, height } = dimensions;
 
-  // function handleCameraStream(images) {
-  //   const loop = async () => {
-  //     const nextImageTensor = images.next().value;
-
-  //     if (!model || !nextImageTensor) throw new Error("no model");
-
-  //     model
-  //       .detect(nextImageTensor)
-  //       .then((predictions) => {
-  //         console.log("predictions", predictions);
-  //         drawRectangle(predictions, nextImageTensor);
-  //       })
-  //       .catch((err) => {
-  //         console.log(err);
-  //       });
-
-  //     requestAnimationFrame(loop);
-  //   };
-  //   loop();
-  // }
-
-  // function drawRectangle(predictions, nextImageTensor) {
-  //   if (!context.current || !canvas.current) {
-  //     console.log("no context or canvas");
-  //     return;
-  //   }
-
-  //   const scaleWidth = width / nextImageTensor.shape[1];
-  //   const scaleHeight = height / nextImageTensor.shape[0];
-
-  //   const flipHorizontal = Platform.OS === "ios" ? false : true;
-
-  //   context.current.clearRect(0, 0, width, height);
-
-  //   predictions.forEach((prediction) => {
-  //     const [x, y, width, height] = prediction.bbox;
-
-  //     const boundingBoxX = flipHorizontal
-  //       ? canvas.current.width - x * scaleWidth - width * scaleWidth
-  //       : x * scaleWidth;
-  //     const boundingBoxY = y * scaleHeight;
-
-  //     context.current.strokeRect(
-  //       boundingBoxX,
-  //       boundingBoxY,
-  //       width * scaleWidth,
-  //       height * scaleHeight
-  //     );
-
-  //     context.current.fillText(
-  //       prediction.class,
-  //       boundingBoxX - 5,
-  //       boundingBoxY - 5
-  //     );
-  //   });
-  // }
-
-  // const handleCanvas = async (can) => {
-  //   if (can) {
-  //     can.width = width;
-  //     can.height = height;
-  //     const ctx = can.getContext("2d");
-  //     context.current = ctx;
-  //     ctx.strokeStyle = "red";
-  //     ctx.fillStyle = "red";
-  //     ctx.lineWidth = 3;
-  //     canvas.current = can;
-  //   }
-  // };
-
-  let textureDims =
-    Platform.OS === "ios"
-      ? { height: 1920, width: 1080 }
-      : { height: 1200, width: 1600 };
-
-  // useEffect(() => {
-  //   (async () => {
-  //     await Camera.requestCameraPermissionsAsync();
-  //     await tf.ready();
-  //     setModel(await cocoSsd.load());
-  //   })();
-  // }, []);
-
   useEffect(() => {
     const unsubscribeFocus = navigation.addListener("focus", () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+      Orientation.lockToPortrait();
     });
 
     const unsubscribeBlur = navigation.addListener("blur", () => {
-      ScreenOrientation.unlockAsync();
+      Orientation.unlockAllOrientations();
     });
 
     return () => {
@@ -178,53 +85,35 @@ const MLCamera = forwardRef((props, ref) => {
         { width: height, height: width, alignSelf: "center" },
       ]}
     >
-      {/* <TensorCamera
-        style={styles.camera}
-        type={Camera.Constants.Type.back}
-        cameraTextureHeight={textureDims.height}
-        cameraTextureWidth={textureDims.width}
-        resizeHeight={200}
-        resizeWidth={152}
-        resizeDepth={3}
-        // onReady={handleCameraStream}
-        autorender={true}
-        useCustomShadersToResize={false}
-      /> */}
-      {/* <Camera
-        ref={cameraRef}
-        style={styles.cameraStyle} // hidden camera
-        autoFocus={true}
-        onCameraReady={() => console.log("Camera is ready")}
-        type={Camera.Constants.Type.back}
-      />
-      <Canvas style={styles.canvas} ref={handleCanvas} /> */}
-      {/* <RNCamera
-        ref={cameraRef}
-        style={styles.cameraStyle}
-        type={RNCamera.Constants.Type.back}
-        captureAudio={false}
-        onCameraReady={() => console.log("Camera is ready")}
-        ratio={"16:9"}
-        zoom={0}
-      /> */}
-      <Camera
-        ref={cameraRef}
-        style={styles.cameraStyle}
-        device={device}
-        isActive={true}
-        onInitialized={() => setIsCameraReady(true)}
-        onError={(error) => console.log("Camera error:", error)}
-        video={true}
-        photo={true}
-        audio={false}
-        resizeMode={"contain"}
-      >
-        {isCameraReady ? (
-          <Text>Camera is ready.</Text>
-        ) : (
-          <Text>Initializing Camera...</Text>
-        )}
-      </Camera>
+      {isActive ? (
+        <View style={styles.loaderStyle}>
+          <ActivityIndicator
+            size={80}
+            color={MD2Colors.black}
+            animating={true}
+          />
+        </View>
+      ) : (
+        <Camera
+          ref={cameraRef}
+          style={styles.cameraStyle}
+          device={device}
+          isActive={true}
+          onInitialized={() => setIsCameraReady(true)}
+          onError={(error) => console.log("Camera error:", error)}
+          video={true}
+          photo={true}
+          audio={false}
+          resizeMode={"contain"}
+          exposure={Platform.OS === "ios" ? -0.1 : 0}
+        >
+          {isCameraReady ? (
+            <Text>Camera is ready.</Text>
+          ) : (
+            <Text>Initializing Camera...</Text>
+          )}
+        </Camera>
+      )}
     </View>
   );
 });
@@ -233,9 +122,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    transform: [
-      { rotate: "-90deg" }, // Rotate the camera view
-    ],
+    // transform: [
+    //   { rotate: "-90deg" }, // Rotate the camera view
+    // ],
+  },
+  loaderStyle: {
+    flex: 1,
+    position: "absolute",
+    top: "40%",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
   },
   camera: {
     flex: 1,

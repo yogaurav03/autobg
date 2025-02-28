@@ -9,8 +9,9 @@ import {
   Platform,
   FlatList,
   RefreshControl,
+  StatusBar,
 } from "react-native";
-import * as ScreenOrientation from "expo-screen-orientation";
+import Orientation from "react-native-orientation-locker";
 import { LeftArrow, RightArrow } from "../../assets/icons";
 import { image1, image2, image3 } from "../../assets/images";
 import { useNavigation } from "@react-navigation/native";
@@ -19,12 +20,14 @@ import { useAppState } from "../../context/AppStateContext";
 import api from "../../utils/Api";
 import { APIURLS } from "../../utils/ApiUrl";
 import { moderateScale } from "../../utils/Scaling";
+import Loader from "../../components/Loader";
 
 const TaskTray = () => {
   const navigation = useNavigation();
   const { state, dispatch } = useAppState();
   const [refreshing, setRefreshing] = useState(false);
   const [taskTrayData, setTaskTrayData] = useState(null);
+  const [loader, setLoader] = useState(false);
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -33,20 +36,24 @@ const TaskTray = () => {
 
   const fetchTaskTray = async () => {
     try {
+      setLoader(true);
       if (state.token) {
         const response = await api.get(APIURLS.getTaskTray, state.token);
 
         const withTimers = response.data.map((item) => ({
           ...item,
           startTime: Date.now(), // Set the current time as start time
-          duration: 15 * 60, // Set duration for 15 minutes in seconds
-          remainingTime: 15 * 60, // Initially set remaining time to full duration
+          duration: 20 * 60, // Set duration for 15 minutes in seconds
+          remainingTime: 20 * 60, // Initially set remaining time to full duration
         }));
 
         dispatch({ type: "TASK_TRAY_DATA", payload: withTimers });
         setTaskTrayData(withTimers);
+        setLoader(false);
       }
     } catch (error) {
+      setLoader(false);
+
       console.error("Failed to fetch user data:", error);
     }
   };
@@ -54,7 +61,7 @@ const TaskTray = () => {
   const getRemainingTime = (startTime) => {
     const currentTime = Date.now();
     const elapsedTime = (currentTime - startTime) / 1000; // in seconds
-    const totalDuration = 15 * 60; // 15 minutes in seconds
+    const totalDuration = 20 * 60; // 15 minutes in seconds
     const remainingTime = totalDuration - elapsedTime;
     return Math.max(remainingTime, 0); // return 0 if the time is negative
   };
@@ -72,21 +79,9 @@ const TaskTray = () => {
   useEffect(() => {
     const lockOrientation = async () => {
       // Lock the orientation to potrait
-      await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.PORTRAIT
-      );
+      Orientation.lockToPortrait();
     };
-
     lockOrientation();
-
-    // Clean up the orientation lock on component unmount
-    return () => {
-      const unlockOrientation = async () => {
-        await ScreenOrientation.unlockAsync(); // This will unlock the orientation
-      };
-
-      unlockOrientation();
-    };
   }, []);
 
   const renderItem = ({ item }) => {
@@ -150,14 +145,19 @@ const TaskTray = () => {
                 <Text style={styles.timeLeft}>{formatTime(remainingTime)}</Text>
               )}
             </CountdownCircleTimer>
-          ) : null}
+          ) : (
+            <View style={{ marginRight: 10 }}>
+              <RightArrow />
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
+      {loader && <Loader />}
       <View style={styles.container}>
         <View style={styles.header}>
           <View>
@@ -192,11 +192,16 @@ const TaskTray = () => {
 };
 
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+    padding: Platform.OS === "android" ? 10 : 20,
+  },
   container: {
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
-    backgroundColor: "#EAF7FF", // Background color of the screen
-    paddingTop: Platform.OS === "android" ? 15 : 0,
+    backgroundColor: "#EAF7FF",
   },
   header: {
     flexDirection: "row",
@@ -365,7 +370,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderRadius: 10,
     padding: 10,
-    paddingBottom: 50,
+    paddingBottom: 100,
   },
   historyHeader: {
     flexDirection: "row",

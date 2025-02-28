@@ -9,16 +9,19 @@ import {
   Platform,
   FlatList,
   RefreshControl,
+  StatusBar,
 } from "react-native";
 import { HistoryIcon, RightArrow, TaskTray, TwoBall } from "../../assets/icons";
 import { image1, image2, image3 } from "../../assets/images";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import Orientation from "react-native-orientation-locker";
-import { Camera } from "expo-camera";
 import { useAppState } from "../../context/AppStateContext";
 import { APIURLS } from "../../utils/ApiUrl";
 import api from "../../utils/Api";
 import { moderateScale } from "../../utils/Scaling";
+import { CountdownCircleTimer } from "react-native-countdown-circle-timer";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Loader from "../../components/Loader";
 
 const Home = () => {
   const isFocused = useIsFocused();
@@ -27,26 +30,85 @@ const Home = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [userData, setUserData] = useState(null);
   const [historyData, setHistoryData] = useState(null);
+  const [loader, setLoader] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      // Clear AsyncStorage
+      await AsyncStorage.clear();
+
+      // Update context or global state to reflect logout
+      dispatch({ type: "MAIN_CONTENT", payload: "HomeScreen" });
+      dispatch({ type: "TOKEN", payload: "" });
+      await AsyncStorage.setItem("isFirstInstall", "true");
+    } catch (error) {
+      console.error("Logout failed", error);
+      // Handle any errors here
+    }
+  };
 
   const fetchUserData = async () => {
     try {
       if (state.token) {
         const response = await api.get(APIURLS.getUser, state.token);
-        dispatch({ type: "PROFILE_DATA", payload: response.data });
-        setUserData(response.data);
+        if (response?.message === "JWT token expired") {
+          handleLogout();
+        } else {
+          dispatch({ type: "PROFILE_DATA", payload: response.data });
+          setUserData(response.data);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch user data:", error);
     }
   };
 
+  const getOrInitStartTime = async (collectionId) => {
+    const key = `startTime_${collectionId}`;
+    let storedTime = await AsyncStorage.getItem(key);
+    if (!storedTime) {
+      const newStartTime = Date.now();
+      await AsyncStorage.setItem(key, newStartTime.toString());
+      return newStartTime;
+    }
+    return parseInt(storedTime, 10);
+  };
+
+  // Calculate remaining time based on persistent startTime
+  const getRemainingTime = (startTime) => {
+    const currentTime = Date.now();
+    const elapsedTime = Math.floor((currentTime - startTime) / 1000); // seconds
+    const totalDuration = 20 * 60; // 20 minutes in seconds
+    const remainingTime = totalDuration - elapsedTime;
+
+    return Math.max(remainingTime, 0);
+  };
+
   const fetchHistoryData = async () => {
     try {
+      setLoader(true);
       if (state.token) {
-        const response = await api.get(APIURLS.getHistory, state.token);
-        setHistoryData(response.data?.slice(0, 5));
+        const response = await api.get(APIURLS.getTaskTray, state.token);
+        const withTimers = await Promise.all(
+          response?.data?.map(async (item) => {
+            const startTime = await getOrInitStartTime(
+              item?.collectionData?.collectionId
+            );
+            const remainingTime = getRemainingTime(startTime);
+            return {
+              ...item,
+              startTime,
+              duration: 20 * 60,
+              remainingTime,
+            };
+          })
+        );
+        setHistoryData(withTimers);
+        setLoader(false);
       }
     } catch (error) {
+      setLoader(false);
+
       console.error("Failed to fetch user data:", error);
     }
   };
@@ -66,35 +128,38 @@ const Home = () => {
     };
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      await Camera.requestCameraPermissionsAsync();
-    })();
-  }, []);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchHistoryData();
     setRefreshing(false);
   }, []);
 
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
+  };
+
   const renderItem = ({ item, index }) => {
     const collectionCreatedAt = new Date(
-      item.collectionData?.collectionCreatedAt
+      item?.collectionData?.collectionCreatedAt
     );
-    const date = collectionCreatedAt.toISOString().split("T")[0];
-    const time = collectionCreatedAt.toTimeString().split(" ")[0];
+    const date = collectionCreatedAt?.toISOString()?.split("T")[0];
+    const time = collectionCreatedAt?.toTimeString()?.split(" ")[0];
 
     const isLastItem = index === historyData?.length - 1;
+
+    const remainingTime = getRemainingTime(item?.startTime);
 
     return (
       <TouchableOpacity
         onPress={() =>
           navigation.navigate("ProcessTrayScreen", {
             historyData: item,
-            screenName: "History",
+            screenName: "TaskTray",
           })
         }
+        disabled={item?.collectionData?.isEmpWorkDone === 0}
         style={[styles.blueContainer, isLastItem ? styles.lastItemStyle : null]}
       >
         {/* Individual list container */}
@@ -105,12 +170,21 @@ const Home = () => {
             <Image source={image2} style={styles.listImage} />
             <View style={styles.totalPhotosContainer}>
               <Image source={image3} style={styles.overlayImage} />
-              <Text style={styles.totalPhotosText}>
-                {item?.processedImgCount === 0
-                  ? item?.failedImgCount
-                  : item?.processedImgCount}{" "}
-                {"\n"} <Text style={styles.photosText}>Photos</Text>
-              </Text>
+              <View style={styles.totalPhotosText}>
+                <Text
+                  style={{
+                    color: "white",
+                    fontSize: moderateScale(24),
+                    textAlign: "center",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {item?.processedImgCount === 0
+                    ? item?.failedImgCount
+                    : item?.processedImgCount}
+                  {"\n"} <Text style={styles.photosText}>Photos</Text>
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -125,13 +199,41 @@ const Home = () => {
           </View>
 
           {/* Right side of list container */}
-          <RightArrow />
+          {item?.collectionData?.isEmpWorkDone === 0 ? (
+            <CountdownCircleTimer
+              size={70}
+              strokeWidth={6}
+              isPlaying
+              duration={item.duration}
+              colors={["#32A1FC", "#F7B801", "#A30000", "#A30000"]}
+              initialRemainingTime={remainingTime}
+              colorsTime={[7, 5, 2, 0]}
+            >
+              {({ remainingTime }) => (
+                <Text style={styles.timeLeft}>{formatTime(remainingTime)}</Text>
+              )}
+            </CountdownCircleTimer>
+          ) : (
+            <View style={{ marginRight: 10 }}>
+              <RightArrow />
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
   };
+
+  const isCurrentCountPresent = userData?.userDetails?.currentCredits < 10;
+
+  const totalCredits = userData?.userDetails?.totalCredits;
+  const currentCredits =
+    userData?.userDetails?.currentCredits === 0
+      ? 0.1
+      : userData?.userDetails?.currentCredits;
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
+      {loader && <Loader />}
       <View style={styles.container}>
         <View style={styles.header}>
           <View>
@@ -141,11 +243,11 @@ const Home = () => {
             </Text>
           </View>
           <TouchableOpacity
-            onPress={() => navigation.navigate("TaskTrayScreen")}
+            onPress={() => navigation.navigate("HistoryScreen")}
             style={styles.taskTrayContainer}
           >
             <TaskTray />
-            <Text style={styles.taskTrayText}>Task Tray</Text>
+            <Text style={styles.taskTrayText}>History</Text>
           </TouchableOpacity>
         </View>
 
@@ -160,7 +262,15 @@ const Home = () => {
               <View style={styles.iconContainer}>
                 <TwoBall />
               </View>
-              <Text style={styles.rowText}>{userData?.processedCount}</Text>
+              <View style={{ width: "60%" }}>
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={styles.rowText}
+                >
+                  {userData?.processedCount}
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -171,25 +281,64 @@ const Home = () => {
             }
             style={styles.rightContainer}
           >
-            <Text style={styles.bottomText}>Current Plan</Text>
+            <Text style={styles.bottomText}>Current Limit</Text>
             <Text style={styles.planText}>
               <Text style={styles.boldText}>
-                {userData?.userDetails?.totalCredits} credits
+                {userData?.userDetails?.totalCredits} images
               </Text>{" "}
-              / per month
+              {/* / per month */}
             </Text>
-            <View style={styles.rowContainer}>
-              <View style={styles.statusContainer}>
-                <View style={styles.dot} />
-                <Text style={styles.statusText}>Active</Text>
+            <View style={{ ...styles.rowContainer }}>
+              <View
+                style={{
+                  ...styles.statusContainer,
+                  borderColor: isCurrentCountPresent ? "#FF000080" : "#8BED0F",
+                }}
+              >
+                <View
+                  style={{
+                    ...styles.dot,
+                    backgroundColor: isCurrentCountPresent
+                      ? "#FF000080"
+                      : "#8BED0F",
+                  }}
+                />
+                <Text
+                  style={{
+                    ...styles.statusText,
+                    color: isCurrentCountPresent ? "#FF000090" : "#69BB01",
+                  }}
+                >
+                  {isCurrentCountPresent
+                    ? "Low Credits"
+                    : userData?.userDetails?.currentCredits === 0
+                    ? "Inactive"
+                    : "Active"}
+                </Text>
               </View>
-              <Text style={styles.rowText}>
-                {userData?.userDetails?.currentCredits}
-              </Text>
+              <View style={{ width: isCurrentCountPresent ? "30%" : "50%" }}>
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={styles.rowText}
+                >
+                  {userData?.userDetails?.currentCredits}
+                </Text>
+              </View>
             </View>
             <View style={styles.sliderContainer}>
-              <View style={styles.fillBlue} />
-              <View style={styles.fillGrey} />
+              <View
+                style={{
+                  ...styles.fillBlue,
+                  flex: !currentCredits ? 100 : currentCredits,
+                }}
+              />
+              <View
+                style={{
+                  ...styles.fillGrey,
+                  flex: !currentCredits ? 100 : totalCredits - currentCredits,
+                }}
+              />
             </View>
           </TouchableOpacity>
         </View>
@@ -198,10 +347,10 @@ const Home = () => {
           <View style={styles.historyHeader}>
             <View style={styles.historyRow}>
               <HistoryIcon />
-              <Text style={styles.historyText}>History</Text>
+              <Text style={styles.historyText}>Task Tray</Text>
             </View>
             <TouchableOpacity
-              onPress={() => navigation.navigate("HistoryScreen")}
+              onPress={() => navigation.navigate("TaskTrayScreen")}
               style={styles.viewAllContainer}
             >
               <Text style={styles.viewAllText}>View all</Text>
@@ -223,17 +372,27 @@ const Home = () => {
 };
 
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+    padding: Platform.OS === "android" ? 10 : 20,
+  },
   container: {
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
     backgroundColor: "#EAF7FF", // Background color of the screen
-    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
+  },
+  timeLeft: {
+    color: "#2499DA",
+    fontWeight: "bold",
+    fontSize: moderateScale(16),
   },
   welcomeText: {
     fontSize: moderateScale(18),
@@ -317,6 +476,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(26),
     color: "#7D7D7D30",
     fontWeight: "bold",
+    textAlign: "right",
   },
   rightContainer: {
     backgroundColor: "white",
@@ -458,10 +618,6 @@ const styles = StyleSheet.create({
     top: "50%",
     left: "50%",
     transform: [{ translateX: -25 }, { translateY: -30 }],
-    color: "white",
-    fontSize: moderateScale(24),
-    textAlign: "center",
-    fontWeight: "bold",
   },
   photosText: {
     fontSize: moderateScale(12),

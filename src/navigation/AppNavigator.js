@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, useNavigation } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import { StatusBar } from "react-native";
+import {
+  ActivityIndicator,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { withIAPContext } from "react-native-iap";
 import {
   Billing,
   Camera,
@@ -10,8 +17,10 @@ import {
   ForgotPassword,
   History,
   Home,
+  MainSplash,
   ManagePassword,
   Preview,
+  PricingScreen,
   Profile,
   QADone,
   SelectBackground,
@@ -19,6 +28,7 @@ import {
   SelectProcessType,
   SelectTemplate,
   SignIn,
+  SignUp,
   Splash,
   TaskQueued,
   TermsPolicy,
@@ -29,16 +39,30 @@ import TaskTray from "../screens/TaskTray";
 import ProcessTray from "../screens/ProcessTray";
 import QAScreen from "../screens/QAScreen";
 import { useAppState } from "../context/AppStateContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import WebViewScreen from "../screens/WebView";
+import NetworkLoggerScreen from "../screens/NetworkLoggerScreen";
 
 const AuthStack = createStackNavigator();
 const MainStack = createStackNavigator();
 
-const AuthNavigator = () => (
-  <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+const AuthNavigator = ({ isFirstInstall }) => (
+  <AuthStack.Navigator
+    screenOptions={{ headerShown: false }}
+    initialRouteName={
+      isFirstInstall === "true" ? "SplashScreen" : "MainSplashScreen"
+    }
+  >
+    <AuthStack.Screen name="MainSplashScreen" component={MainSplash} />
     <AuthStack.Screen name="SplashScreen" component={Splash} />
     <AuthStack.Screen name="SignInScreen" component={SignIn} />
+    <AuthStack.Screen name="SignUpScreen" component={SignUp} />
     <AuthStack.Screen name="ForgotPasswordScreen" component={ForgotPassword} />
     <AuthStack.Screen name="TermsPolicyScreen" component={TermsPolicy} />
+    <AuthStack.Screen
+      name="NetworkLoggerScreen"
+      component={NetworkLoggerScreen}
+    />
   </AuthStack.Navigator>
 );
 
@@ -118,7 +142,7 @@ const MainNavigator = () => (
       component={SelectBackground}
     />
     <MainStack.Screen
-      options={{ headerShown: false }}
+      options={{ headerShown: false, gestureEnabled: true }}
       name="SelectImageAnglesScreen"
       component={SelectImageAngles}
     />
@@ -133,7 +157,7 @@ const MainNavigator = () => (
       component={History}
     />
     <MainStack.Screen
-      options={{ headerShown: false }}
+      options={{ headerShown: false, gestureEnabled: true }}
       name="CameraScreen"
       component={Camera}
     />
@@ -147,24 +171,88 @@ const MainNavigator = () => (
       name="CheckImagesScreen"
       component={CheckImages}
     />
+    <MainStack.Screen
+      options={{ headerShown: false }}
+      name="WebViewScreen"
+      component={WebViewScreen}
+    />
+    <MainStack.Screen
+      options={{ headerShown: false }}
+      name="PricingScreen"
+      component={withIAPContext(PricingScreen)}
+    />
+    <MainStack.Screen
+      options={{ headerShown: false }}
+      name="NetworkLoggerScreen"
+      component={NetworkLoggerScreen}
+    />
   </MainStack.Navigator>
 );
 
 const AppNavigator = () => {
   const { state } = useAppState();
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [isFirstInstall, setIsFirstInstall] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkFirstInstall = async () => {
+      const firstInstall = await AsyncStorage.getItem("isFirstInstall");
+      setIsFirstInstall(firstInstall);
+      setLoading(false);
+    };
+    checkFirstInstall();
+  }, []);
 
   useEffect(() => {
     setIsSignedIn(!!state.token);
   }, [state.token]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+
+  const Logger = () => {
+    const navigation = useNavigation();
+    return (
+      <TouchableOpacity
+        style={{
+          position: "absolute",
+          width: 50,
+          height: 50,
+          backgroundColor: "lightblue",
+          borderRadius: 50,
+          left: 0,
+          bottom: 250,
+          zIndex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        onPress={() => navigation.navigate("NetworkLoggerScreen")}
+      >
+        <Text>Logs</Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <NavigationContainer>
+      {/* <Logger /> */}
       <StatusBar
         translucent
         backgroundColor="transparent"
         barStyle="dark-content"
       />
-      {isSignedIn ? <MainNavigator /> : <AuthNavigator />}
+
+      {isSignedIn ? (
+        <MainNavigator />
+      ) : (
+        <AuthNavigator isFirstInstall={isFirstInstall} />
+      )}
     </NavigationContainer>
   );
 };

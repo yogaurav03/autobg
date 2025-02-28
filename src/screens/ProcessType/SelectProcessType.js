@@ -5,6 +5,8 @@ import {
   Platform,
   TouchableOpacity,
   View,
+  StatusBar,
+  Alert,
 } from "react-native";
 import React from "react";
 import {
@@ -17,19 +19,29 @@ import {
 import { moderateScale } from "../../utils/Scaling";
 
 const SelectProcessType = ({ navigation }) => {
-  const SubContainer = ({ title, subTitle, id }) => {
+  const onClickProcess = (id) => () => {
+    if (id === 2) {
+      // Alert.alert("Comming Soon", "Car Studio... inprogress...");
+    } else {
+      navigation.navigate("FolderNameScreen", {
+        id: id,
+      });
+    }
+  };
+  const SubContainer = ({ title, subTitle, id, inprogress }) => {
     return (
       <TouchableOpacity
-        onPress={() =>
-          navigation.navigate("FolderNameScreen", {
-            id: id,
-          })
-        }
-        style={styles.subContainer}
+        onPress={onClickProcess(id)}
+        style={{ ...styles.subContainer }}
+        disabled={inprogress}
       >
         <View>
-          <Text style={styles.titleTxt}>{title}</Text>
-          <Text style={styles.subTitleTxt}>{subTitle}</Text>
+          <View>
+            <Text style={styles.titleTxt}>{title}</Text>
+            <Text style={styles.subTitleTxt}>{subTitle}</Text>
+          </View>
+
+          {inprogress && <Text style={styles.overlayText}>Coming Soon...</Text>}
         </View>
         {subTitle === "Saved Template" ? (
           <SavedTemplateIcon />
@@ -38,11 +50,12 @@ const SelectProcessType = ({ navigation }) => {
         ) : (
           <TransparentImageIcon />
         )}
+        {inprogress && <View style={styles.overlay}></View>}
       </TouchableOpacity>
     );
   };
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
       <View style={styles.container}>
         <View>
           <TouchableOpacity
@@ -60,24 +73,40 @@ const SelectProcessType = ({ navigation }) => {
             {/* <HelpIcon /> */}
           </View>
         </View>
-        <SubContainer title="Generate using" subTitle="Saved Template" id={1} />
-        <SubContainer title="Generate using" subTitle="Car Studio" id={2} />
+        <SubContainer
+          title="Generate using"
+          subTitle="Saved Template"
+          id={1}
+          inprogress={false}
+        />
         <SubContainer
           title="Generate using"
           subTitle="Transparent Images "
           id={3}
+          inprogress={false}
         />
+        {/* <SubContainer
+          title="Generate using"
+          subTitle="Car Studio"
+          id={2}
+          inprogress={true}
+        /> */}
       </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+    padding: Platform.OS === "android" ? 10 : 20,
+  },
   container: {
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 20,
-    backgroundColor: "#EAF7FF", // Background color of the screen
-    paddingTop: Platform.OS === "android" ? 15 : 0,
+    backgroundColor: "#EAF7FF",
   },
   backText: {
     color: "#004E8E",
@@ -114,6 +143,20 @@ const styles = StyleSheet.create({
     paddingRight: 30,
     height: "22%",
     marginVertical: 8,
+    position: "relative",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject, // Fill the entire TouchableOpacity
+    backgroundColor: "0072CF30", // Semi-transparent overlay
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  overlayText: {
+    color: "#1C6998",
+    fontSize: moderateScale(16),
+    fontWeight: "500",
+    marginTop: 15,
   },
   titleTxt: {
     color: "#32A1FC",

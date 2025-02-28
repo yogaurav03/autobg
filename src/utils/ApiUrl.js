@@ -1,5 +1,6 @@
 export const APIURLS = {
   login: "login",
+  signup: "register",
   managepassword: (userid) => `managepassword?userid=${userid}`,
   forgotpassword: "forgotpassword",
   getUser: "getuser",
@@ -15,4 +16,8 @@ export const APIURLS = {
   uploadImage: "uploadins3",
   withtemplate: "withtemplate",
   withouttemplate: "withouttemplate",
+  downloadImage: (batchId) => `downloadImages?batchId=${batchId}`,
+  getPlans: "payments/getPlans",
+  buyPlans: "payments/buyPlan",
+  updatePayment: "payments/updatePayment",
 };

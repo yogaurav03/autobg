@@ -9,14 +9,56 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   ScrollView,
+  StatusBar,
+  Alert,
 } from "react-native";
-import { CarIcon, LeftArrow } from "../../assets/icons";
+import { CarIcon, FrontView, LeftArrow } from "../../assets/icons";
 import { moderateScale } from "../../utils/Scaling";
+import { APIURLS } from "../../utils/ApiUrl";
+import api from "../../utils/Api";
+import { useAppState } from "../../context/AppStateContext";
 
 const FolderName = ({ navigation, route }) => {
+  const { state } = useAppState();
+
   const [numberPlate, setNumberPlate] = useState("");
+  const userId = state?.profileData?.userDetails?.id;
+
+  const createBatch = async () => {
+    const response = await api.post(
+      APIURLS.createBatch,
+      {
+        userid: userId,
+        templateid: 0,
+        numberplate: numberPlate,
+      },
+      state.token
+    );
+    if (response.code === 1) {
+      navigation.navigate("SelectImageAnglesScreen", {
+        batchId: response?.batchid,
+        selectedTemplateId: 0,
+        screenId: route.params?.id,
+      });
+    } else {
+      Alert.alert(response.message || "Please try again.");
+    }
+  };
+
+  const onPressFolder = () => {
+    if (route.params?.id === 3) {
+      createBatch();
+    } else if (route.params?.id === 2) {
+      navigation.navigate("SelectBackgroundScreen");
+    } else {
+      navigation.navigate("SelectTemplateScreen", {
+        numberPlate: numberPlate,
+        screenId: route.params?.id,
+      });
+    }
+  };
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeareaviewContainer}>
       <View style={styles.container}>
         <KeyboardAvoidingView
           style={styles.container}
@@ -57,16 +99,7 @@ const FolderName = ({ navigation, route }) => {
               </View>
 
               <TouchableOpacity
-                onPress={() =>
-                  route.params?.id === 3
-                    ? navigation.navigate("SelectImageAnglesScreen")
-                    : route.params?.id === 2
-                    ? navigation.navigate("SelectBackgroundScreen")
-                    : navigation.navigate("SelectTemplateScreen", {
-                        numberPlate: numberPlate,
-                        screenId: route.params?.id,
-                      })
-                }
+                onPress={() => onPressFolder()}
                 disabled={numberPlate === "" ? true : false}
                 style={[
                   styles.nextButton,
@@ -84,11 +117,15 @@ const FolderName = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
+  safeareaviewContainer: {
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    flex: 1,
+    backgroundColor: "#EAF7FF",
+  },
   container: {
     flex: 1,
     padding: Platform.OS === "android" ? 10 : 10,
     backgroundColor: "#EAF7FF",
-    paddingTop: Platform.OS === "android" ? 15 : 0,
   },
   backButton: {
     flexDirection: "row",
@@ -159,6 +196,7 @@ const styles = StyleSheet.create({
     color: "#004E8E",
     fontSize: moderateScale(12),
     fontWeight: "300",
+    textAlign: "center",
   },
   nextButton: {
     width: "80%",
